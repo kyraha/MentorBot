@@ -10,8 +10,19 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
 /**
- * A class that limits the rate of change of an input state. Useful for implementing sluggish joystick
- * to prevent sudden moves, especially for swerve srivetrains.
+ * A class that limits the rate of change of a 2-dimensional input.
+ * Useful for implementing sluggish joystick to prevent sudden moves,
+ * especially for swerve drivetrains.
+ * 
+ * There are two different rate limits:
+ * - Radial - is how fast the joystick can be moved radially, away or towards the  center
+ * - Angular - is how fast (radians/second) the joystick can change the direction it is pointing to
+ *      when it is at full extent. The effective angular limit is variable and calculated so it can
+ *      be ignored when the joystick is close to its neutral position.
+ * 
+ * The input for calculate() is a Translation2d vector. It can be composed of x and y coordinates
+ * of the operator input device. And the output of calculate() method is the filtered Translation2d
+ * vector that can be further used to control a holonomic drive system.
  */
 public class SkidLimiter {
     private final double m_angularRateLimit;
@@ -24,10 +35,10 @@ public class SkidLimiter {
      * value.
      *
      * @param angularRateLimit The arch rate-of-change limit at max radius, in radians per
-     *     second. This is expected to be positive.
+     *     second. This is expected to be strictly positive. Limit = 0 doesn't make sense.
      * @param radialRateLimit The radial rate-of-change limit, in units per
-     *     second. This is expected to be positive.
-     * @param initialValue The initial value of the input.
+     *     second. This can be either positive number or 0 to disable radial limit.
+     * @param initialValue The initial state. Also see reset()
      */
     public SkidLimiter(double angularRateLimit, double radialRateLimit, Translation2d initialValue) {
         m_angularRateLimit = angularRateLimit;
@@ -69,24 +80,34 @@ public class SkidLimiter {
      * @return The new, allowed translation vector
      */
     public Translation2d calculateDry(Translation2d input, double elapsedTime) {
+        double angularChangeLimit = m_angularRateLimit * elapsedTime;
+        double radialChangeLimit = m_radialRateLimit * elapsedTime;
+
+        double newNorm = input.getNorm();
+        double prevNorm = m_prevState.getNorm();
+
         Rotation2d newAngle = input.getAngle();
-        if(m_prevState.getNorm() > m_angularRateLimit / Math.PI) {
-            double angularLimit = m_angularRateLimit / m_prevState.getNorm();
-            double desiredRotationRadians = Math.abs(input.getAngle().minus(m_prevState.getAngle()).getRadians());
-            if(desiredRotationRadians > angularLimit) {
-                double t = angularLimit / desiredRotationRadians;
-                newAngle = m_prevState.getAngle().interpolate(input.getAngle(), t);
+        Rotation2d prevAngle = m_prevState.getAngle();
+
+        if(prevNorm > angularChangeLimit / Math.PI) {
+            // Our theory is that angular limit should be inversly proportional to the magnitude
+            // The simplest formula would be "Const / Norm" for the starters <-- edit this statement if theory changes
+            double allowedChangeRadians = angularChangeLimit / prevNorm;
+            Rotation2d desiredRotation = newAngle.minus(prevAngle);
+            double desiredAngleAbsRadians = Math.abs(desiredRotation.getRadians());
+            if(desiredAngleAbsRadians > allowedChangeRadians) {
+                // t is how far between the initial and end values we are. It should be bounded in [0, 1]
+                double t = allowedChangeRadians / desiredAngleAbsRadians;
+                newAngle = prevAngle.interpolate(newAngle, t);
             }
         }
         
-        double newRadius = input.getNorm();
         if(m_radialRateLimit > 0) {
-            newRadius = m_prevState.getNorm() +
-                MathUtil.clamp(
-                    input.getNorm() - m_prevState.getNorm(),
-                    0, m_radialRateLimit * elapsedTime);
+            newNorm = prevNorm +
+                MathUtil.clamp(newNorm - prevNorm, -radialChangeLimit, radialChangeLimit);
         }
-        return new Translation2d(newRadius, newAngle);
+
+        return new Translation2d(newNorm, newAngle);
     }
 
     /**
