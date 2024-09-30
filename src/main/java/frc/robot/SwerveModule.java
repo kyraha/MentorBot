@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import org.json.JSONObject;
+
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 
@@ -11,11 +13,15 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.util.sendable.Sendable;
+import edu.wpi.first.util.sendable.SendableBuilder;
 
-public class SwerveModule {
+public class SwerveModule implements Sendable {
+  public final Translation2d mountPoint;
   private static final double kWheelRadius = 0.0508;
   public final static double steerGearRatio = 21.42857; // Checked 2/2/24 //150d/7d = 21.42857  checked 1/19
   public final static double driveGearRatio = 6.12; // Checked 2/2/24 //6.75  checked 1/19/23
@@ -29,7 +35,8 @@ public class SwerveModule {
   private final TalonFX steerMotor; // the steering motor
   private final TalonFX driveMotor; // the driving motor
   private final CANcoder absEncoder; // the can encoder attached to the steering shaft
-  private final double absEncoderOffset; 
+  private final double absEncoderOffset;
+  private final String moduleName; // to tell modules apart, e.g. on the ShuffleBoard
 
   private final PIDController drivePIDController = new PIDController(1, 0, 0);
 
@@ -45,22 +52,47 @@ public class SwerveModule {
   /**
    * Constructs a SwerveModule with a drive motor, steering motor, drive encoder and steering encoder.
    *
+   * @param name String name of the module.
+   * @param location Translation of the module from the robot's origin.
    * @param steerMotorCanId CAN ID for the steering motor.
    * @param driveMotorCanId CAN ID for the drive motor.
    * @param cancoderCanId CAN ID for the absolute steering encoder.
    * @param cancoderOffsetRotations the CANcoder reading when it's at physical zero
    */
-  public SwerveModule(int steerMotorCanId, int driveMotorCanId, int cancoderCanId, double cancoderOffsetRotations) {
+  public SwerveModule(String name, Translation2d location, int steerMotorCanId, int driveMotorCanId, int cancoderCanId, double cancoderOffsetRotations) {
+    moduleName = name;
     steerMotor = new TalonFX(steerMotorCanId);
     driveMotor = new TalonFX(driveMotorCanId);
     absEncoder = new CANcoder(cancoderCanId);
     absEncoderOffset = cancoderOffsetRotations;
+    mountPoint = location;
 
     // Limit the PID Controller's input range between -pi and pi and set the input
     // to be continuous.
     steerPIDController.enableContinuousInput(-Math.PI, Math.PI); // wrap for circles
     steerPIDController.setTolerance(0.0025, 0.05); // at position tolerance
     resetSteeringPosition();
+  }
+
+  public SwerveModule(JSONObject config) {
+    this(
+      config.getString("name"),
+      new Translation2d(
+        config.getJSONObject("location").getDouble("x"),
+        config.getJSONObject("location").getDouble("y")),
+      config.getJSONObject("steer").getInt("can"),
+      config.getJSONObject("drive").getInt("can"),
+      config.getJSONObject("encoder").getInt("can"),
+      config.getJSONObject("encoder").getDouble("offset"));
+  }
+
+  /**
+   * Builds the sendable for shuffleboard
+   * @param builder sendable builder
+   */
+  @Override
+  public void initSendable(SendableBuilder builder) {
+    builder.setSmartDashboardType(moduleName);
   }
 
   void resetSteeringPosition() {

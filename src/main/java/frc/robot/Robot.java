@@ -7,12 +7,15 @@ package frc.robot;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.AnalogGyro;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
 
 public class Robot extends TimedRobot {
+  private final AnalogGyro m_gyro = new AnalogGyro(0);
   private final XboxController m_controller = new XboxController(0);
-  private final Drivetrain m_swerve = new Drivetrain();
+  private final Drivetrain m_swerve = new Drivetrain(m_gyro);
 
   // Slew rate limiters to make joystick inputs more gentle; 1/3 sec from 0 to 1.
   private final SkidLimiter m_skidLimiter = new SkidLimiter(3);
@@ -49,6 +52,9 @@ public class Robot extends TimedRobot {
         -m_rotLimiter.calculate(MathUtil.applyDeadband(m_controller.getRightX(), 0.02))
             * Drivetrain.kMaxAngularSpeed;
 
-    m_swerve.drive(stick.getX(), stick.getY(), rot, fieldRelative, getPeriod());
+    final ChassisSpeeds speeds = fieldRelative
+      ? ChassisSpeeds.fromFieldRelativeSpeeds(stick.getX(), stick.getY(), rot, m_gyro.getRotation2d())
+      : new ChassisSpeeds(stick.getX(), stick.getY(), rot);
+    m_swerve.drive(speeds, getPeriod());
   }
 }
