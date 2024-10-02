@@ -21,69 +21,71 @@ import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.util.sendable.SendableBuilder;
 
 public class SwerveModule implements Sendable {
-  public final Translation2d mountPoint;
-  private static final double kWheelRadius = 0.0508;
-  public final static double steerGearRatio = 21.42857; // Checked 2/2/24 //150d/7d = 21.42857  checked 1/19
-  public final static double driveGearRatio = 6.12; // Checked 2/2/24 //6.75  checked 1/19/23
-  public static final double steerRotToRads = 2.0 * Math.PI / steerGearRatio;
-  public final static double driveRotToMeters = 2.0 * kWheelRadius * Math.PI / driveGearRatio;
+  private static final TrapezoidProfile.Constraints steerConstraints =
+    new TrapezoidProfile.Constraints(13, 30);
 
-  private static final double kModuleMaxAngularVelocity = Drivetrain.kMaxAngularSpeed;
-  private static final double kModuleMaxAngularAcceleration =
-      2 * Math.PI; // radians per second squared
+  // TBD: Should we move these static constants to the config?
+  private static final double kWheelRadius = 0.0508; // in meters
+  private static final double steerGearRatio = 21.42857; // Checked 2/2/24 //150d/7d = 21.42857  checked 1/19
+  private static final double driveGearRatio = 6.12; // Checked 2/2/24 //6.75  checked 1/19/23
+
+  private static final double steerRotToRads = 2.0 * Math.PI / steerGearRatio;
+  private static final double driveRotToMeters = 2.0 * Math.PI * kWheelRadius / driveGearRatio;
 
   private final TalonFX steerMotor; // the steering motor
   private final TalonFX driveMotor; // the driving motor
   private final CANcoder absEncoder; // the can encoder attached to the steering shaft
-  private final double absEncoderOffset;
+  private final double absEncoderOffsetRadians;
   private final String moduleName; // to tell modules apart, e.g. on the ShuffleBoard
 
-  private final PIDController drivePIDController = new PIDController(1, 0, 0);
+  private final PIDController drivePIDController;
+  private final ProfiledPIDController steerPIDController;
+  private final SimpleMotorFeedforward drivingFeedforward;
+  private final SimpleMotorFeedforward steeringFeedforward;
 
-  private final ProfiledPIDController steerPIDController =
-      new ProfiledPIDController(1.25, 0.05, 0,
-          new TrapezoidProfile.Constraints(
-              kModuleMaxAngularVelocity, kModuleMaxAngularAcceleration));
-
-  // Gains are for example purposes only - must be determined for your own robot!
-  private final SimpleMotorFeedforward drivingFeedforward = new SimpleMotorFeedforward(1, 2.0);
-  private final SimpleMotorFeedforward steeringFeedforward = new SimpleMotorFeedforward(1, 0.5);
+  /**
+   * Mount point of the swerve module in meters relative to an agreed "center" of the robot
+   */
+  public final Translation2d mountPoint;
 
   /**
    * Constructs a SwerveModule with a drive motor, steering motor, drive encoder and steering encoder.
    *
-   * @param name String name of the module.
-   * @param location Translation of the module from the robot's origin.
-   * @param steerMotorCanId CAN ID for the steering motor.
-   * @param driveMotorCanId CAN ID for the drive motor.
-   * @param cancoderCanId CAN ID for the absolute steering encoder.
-   * @param cancoderOffsetRotations the CANcoder reading when it's at physical zero
+   * @param config A JSONObject type object of a certain structure that has all the configuration.
+   * 
+   * location - translation of the module from the robot's origin.
+   * encoder/offset - the CANcoder reading in radians when it's at physical zero
    */
-  public SwerveModule(String name, Translation2d location, int steerMotorCanId, int driveMotorCanId, int cancoderCanId, double cancoderOffsetRotations) {
-    moduleName = name;
-    steerMotor = new TalonFX(steerMotorCanId);
-    driveMotor = new TalonFX(driveMotorCanId);
-    absEncoder = new CANcoder(cancoderCanId);
-    absEncoderOffset = cancoderOffsetRotations;
-    mountPoint = location;
+  public SwerveModule(JSONObject config) {
+    moduleName = config.getString("name");
+    absEncoderOffsetRadians = config.getJSONObject("encoder").getDouble("offset");
+    mountPoint = new Translation2d(
+        config.getJSONObject("location").getDouble("x"),
+        config.getJSONObject("location").getDouble("y"));
 
-    // Limit the PID Controller's input range between -pi and pi and set the input
-    // to be continuous.
+    steerMotor = new TalonFX(config.getJSONObject("steer").getInt("can"));
+    driveMotor = new TalonFX(config.getJSONObject("drive").getInt("can"));
+    absEncoder = new CANcoder(config.getJSONObject("encoder").getInt("can"));
+
+    // Setup the steering PID controller
+    var steerPID = config.getJSONObject("steer");
+    steerPIDController = new ProfiledPIDController(
+      steerPID.getDouble("kP"),
+      steerPID.getDouble("kI"),
+      steerPID.getDouble("kD"), steerConstraints);
     steerPIDController.enableContinuousInput(-Math.PI, Math.PI); // wrap for circles
     steerPIDController.setTolerance(0.0025, 0.05); // at position tolerance
-    resetSteeringPosition();
-  }
+    steeringFeedforward = new SimpleMotorFeedforward(steerPID.getDouble("kS"), steerPID.getDouble("kV"));
 
-  public SwerveModule(JSONObject config) {
-    this(
-      config.getString("name"),
-      new Translation2d(
-        config.getJSONObject("location").getDouble("x"),
-        config.getJSONObject("location").getDouble("y")),
-      config.getJSONObject("steer").getInt("can"),
-      config.getJSONObject("drive").getInt("can"),
-      config.getJSONObject("encoder").getInt("can"),
-      config.getJSONObject("encoder").getDouble("offset"));
+    // Setup the drive PID controller
+    var drivePID = config.getJSONObject("drive");
+    drivePIDController = new PIDController(
+      drivePID.getDouble("kP"),
+      drivePID.getDouble("kI"),
+      drivePID.getDouble("kD"));
+      drivingFeedforward = new SimpleMotorFeedforward(drivePID.getDouble("kS"), drivePID.getDouble("kV"));
+
+    resetSteeringPosition();
   }
 
   /**
@@ -95,9 +97,17 @@ public class SwerveModule implements Sendable {
     builder.setSmartDashboardType(moduleName);
   }
 
-  void resetSteeringPosition() {
-    double currentPosition = absEncoder.getAbsolutePosition().getValueAsDouble();
-    steerMotor.setPosition(currentPosition - absEncoderOffset);
+  /**
+   * Resets the steering motor position sensor to the current reading from the
+   * absolute encoder. This operation is needed most likely only once at the power up.
+   */
+  public void resetSteeringPosition() {
+    // Read absolute encoder position in rotations
+    double absRotations = absEncoder.getAbsolutePosition().getValueAsDouble();
+    // Subtract the offset (in rotations) to find the real steering angle
+    double actualRotations = (absRotations - absEncoderOffsetRadians/(2.0*Math.PI));
+    // And store the result into the steer motor scaled up by the gear ratio
+    steerMotor.setPosition(actualRotations * steerGearRatio);
   }
 
   /**
@@ -120,7 +130,6 @@ public class SwerveModule implements Sendable {
 
   public Rotation2d getSteerRotation2d() {
     return Rotation2d.fromRadians(steerMotor.getPosition().getValueAsDouble() * steerRotToRads);
-    //Rotation2d.fromRadians(m_absoluteEncoder.getPosition().getValueAsDouble()));
   }
 
   public double getDrivePosition() {
@@ -137,15 +146,15 @@ public class SwerveModule implements Sendable {
    * @param desiredState Desired state with speed and angle.
    */
   public void setDesiredState(SwerveModuleState desiredState) {
-    var encoderRotation = getSteerRotation2d();
+    var currentAngle = getSteerRotation2d();
 
     // Optimize the reference state to avoid spinning further than 90 degrees
-    SwerveModuleState state = SwerveModuleState.optimize(desiredState, encoderRotation);
+    SwerveModuleState state = SwerveModuleState.optimize(desiredState, currentAngle);
 
     // Scale speed by cosine of angle error. This scales down movement perpendicular to the desired
     // direction of travel that can occur when modules change directions. This results in smoother
     // driving.
-    state.speedMetersPerSecond *= state.angle.minus(encoderRotation).getCos();
+    state.speedMetersPerSecond *= state.angle.minus(currentAngle).getCos();
 
     // Calculate the drive output from the drive PID controller.
     final double driveOutput =
@@ -155,7 +164,7 @@ public class SwerveModule implements Sendable {
 
     // Calculate the turning motor output from the turning PID controller.
     final double turnOutput =
-        steerPIDController.calculate(getSteerRotation2d().getRadians(), state.angle.getRadians());
+        steerPIDController.calculate(currentAngle.getRadians(), state.angle.getRadians());
 
     final double turnFeedforward =
         steeringFeedforward.calculate(steerPIDController.getSetpoint().velocity);
