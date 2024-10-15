@@ -95,6 +95,11 @@ public class SwerveModule implements Sendable {
   @Override
   public void initSendable(SendableBuilder builder) {
     builder.setSmartDashboardType(moduleName);
+    builder.addDoubleProperty("X-offset", mountPoint::getX, null);
+    builder.addDoubleProperty("Y-offset", mountPoint::getY, null);
+    builder.addDoubleProperty("Mileage", this::getDrivePosition, null);
+    builder.addDoubleProperty("Speed", this::getDriveVelocity, null);
+    builder.addDoubleProperty("Azimuth", this::getSteerDegrees, null);
   }
 
   /**
@@ -130,6 +135,10 @@ public class SwerveModule implements Sendable {
 
   public Rotation2d getSteerRotation2d() {
     return Rotation2d.fromRadians(steerMotor.getPosition().getValueAsDouble() * steerRotToRads);
+  }
+
+  public double getSteerDegrees() {
+    return getSteerRotation2d().getDegrees();
   }
 
   public double getDrivePosition() {

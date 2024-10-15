@@ -4,7 +4,6 @@
 
 package frc.robot;
 
-import java.util.ArrayList;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -19,26 +18,25 @@ import edu.wpi.first.wpilibj.AnalogGyro;
 public class Drivetrain {
   public static final double kMaxSpeed = 3.0; // 3 meters per second
   public static final double kMaxAngularSpeed = Math.PI; // 1/2 rotation per second
+
   private final AnalogGyro m_gyro;
-
-  private final ArrayList<SwerveModule> swerveModules;
+  private final int nModules;
+  private final SwerveModule[] swerveModules;
   private final SwerveDriveKinematics kinematics;
-
   private final SwerveDriveOdometry odometry;
 
   public Drivetrain(AnalogGyro analogGyro) {
     m_gyro = analogGyro;
-    swerveModules = new ArrayList<>();
     JSONObject drivetrainConfig = ConfigReader.readConfig("DrivetrainConfig.json");
     JSONArray swerveModulesConfig = drivetrainConfig.getJSONArray("swerveModules");
+    nModules = swerveModulesConfig.length();
+    swerveModules = new SwerveModule[nModules];
+    var swerveLocations = new Translation2d[nModules];
 
-    for (Object oneObject : swerveModulesConfig) {
-      swerveModules.add(new SwerveModule((JSONObject) oneObject));
-    }
-
-    var swerveLocations = new Translation2d[swerveModules.size()];
-    for (int i=0; i < swerveModules.size(); i++) {
-      swerveLocations[i] = swerveModules.get(i).mountPoint;
+    for (int i=0; i < nModules; i++) {
+      Object oneObject = swerveModulesConfig.get(i);
+      swerveModules[i] = new SwerveModule((JSONObject) oneObject);
+      swerveLocations[i] = swerveModules[i].mountPoint;
     }
     kinematics = new SwerveDriveKinematics(swerveLocations);
 
@@ -60,8 +58,8 @@ public class Drivetrain {
     var discretSpeeds = ChassisSpeeds.discretize(speeds, periodSeconds);
     var swerveModuleStates = kinematics.toSwerveModuleStates(discretSpeeds);
     SwerveDriveKinematics.desaturateWheelSpeeds(swerveModuleStates, kMaxSpeed);
-    for (int i=0; i < swerveModules.size(); i++) {
-      swerveModules.get(i).setDesiredState(swerveModuleStates[i]);
+    for (int i=0; i < nModules; i++) {
+      swerveModules[i].setDesiredState(swerveModuleStates[i]);
     }
   }
 
@@ -73,9 +71,9 @@ public class Drivetrain {
   }
 
   public SwerveModulePosition[] getSwervePositions() {
-    var returnArray = new SwerveModulePosition[swerveModules.size()];
-    for (int i=0; i < swerveModules.size(); i++) {
-      returnArray[i] = swerveModules.get(i).getPosition();
+    var returnArray = new SwerveModulePosition[nModules];
+    for (int i=0; i < nModules; i++) {
+      returnArray[i] = swerveModules[i].getPosition();
     }
     return returnArray;
   }
