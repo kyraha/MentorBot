@@ -149,6 +149,10 @@ public class SwerveModule implements Sendable {
     return driveMotor.getVelocity().getValueAsDouble() * driveRotToMeters;
   }
 
+  public String getName() {
+    return moduleName;
+  }
+
   /**
    * Sets the desired state for the module.
    *

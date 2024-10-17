@@ -7,45 +7,48 @@ package frc.robot;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
-import edu.wpi.first.wpilibj.AnalogGyro;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 /** Represents a swerve drive style drivetrain. */
-public class Drivetrain {
+public class Drivetrain extends SubsystemBase {
   public static final double kMaxSpeed = 3.0; // 3 meters per second
   public static final double kMaxAngularSpeed = Math.PI; // 1/2 rotation per second
 
-  private final AnalogGyro m_gyro;
   private final int nModules;
   private final SwerveModule[] swerveModules;
   private final SwerveDriveKinematics kinematics;
   private final SwerveDriveOdometry odometry;
+  private final SwerveModulePosition[] currentPositions;
 
-  public Drivetrain(AnalogGyro analogGyro) {
-    m_gyro = analogGyro;
+  public Drivetrain(Rotation2d initialRotation2d) {
     JSONObject drivetrainConfig = ConfigReader.readConfig("DrivetrainConfig.json");
     JSONArray swerveModulesConfig = drivetrainConfig.getJSONArray("swerveModules");
     nModules = swerveModulesConfig.length();
+    currentPositions = new SwerveModulePosition[nModules];
     swerveModules = new SwerveModule[nModules];
     var swerveLocations = new Translation2d[nModules];
 
     for (int i=0; i < nModules; i++) {
-      Object oneObject = swerveModulesConfig.get(i);
-      swerveModules[i] = new SwerveModule((JSONObject) oneObject);
-      swerveLocations[i] = swerveModules[i].mountPoint;
+      var configObject = (JSONObject) swerveModulesConfig.get(i);
+      var oneModule = new SwerveModule(configObject);
+      swerveModules[i] = oneModule;
+      swerveLocations[i] = oneModule.mountPoint;
+      currentPositions[i] = oneModule.getPosition();
+      addChild(oneModule.getName(), oneModule);
     }
     kinematics = new SwerveDriveKinematics(swerveLocations);
 
     odometry = new SwerveDriveOdometry(
       kinematics,
-      m_gyro.getRotation2d(),
-      getSwervePositions());
-
-    m_gyro.reset();
+      initialRotation2d,
+      currentPositions);
   }
 
   /**
@@ -64,17 +67,11 @@ public class Drivetrain {
   }
 
   /** Updates the field relative position of the robot. */
-  public void updateOdometry() {
-    odometry.update(
-        m_gyro.getRotation2d(),
-        getSwervePositions());
+  public Pose2d updateOdometry(Rotation2d externalRotation2d) {
+    for (int i=0; i < nModules; i++) {
+      currentPositions[i] = swerveModules[i].getPosition();
+    }
+    return odometry.update(externalRotation2d, currentPositions);
   }
 
-  public SwerveModulePosition[] getSwervePositions() {
-    var returnArray = new SwerveModulePosition[nModules];
-    for (int i=0; i < nModules; i++) {
-      returnArray[i] = swerveModules[i].getPosition();
-    }
-    return returnArray;
-  }
 }

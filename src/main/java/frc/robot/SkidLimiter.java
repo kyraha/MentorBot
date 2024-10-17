@@ -25,8 +25,9 @@ import edu.wpi.first.math.geometry.Translation2d;
  * vector that can be further used to control a holonomic drive system.
  */
 public class SkidLimiter {
-    private final double m_angularRateLimit;
-    private final double m_radialRateLimit;
+    private double m_angularRateLimit;
+    private double m_radialRateLimit;
+
     private Translation2d m_prevState;
     private double m_prevTime;
 
@@ -50,10 +51,10 @@ public class SkidLimiter {
     /**
      * Creates a new SkidLimiter with the given angular rate limit and unlimited radial movement
      *
-     * @param rateLimit The arch change per second limit.
+     * @param angularRateLimit The arch change per second limit.
      */
-    public SkidLimiter(double rateLimit) {
-        this(rateLimit, 0, new Translation2d());
+    public SkidLimiter(double angularRateLimit) {
+        this(angularRateLimit, 0, new Translation2d());
     }
 
     /**
@@ -118,5 +119,15 @@ public class SkidLimiter {
     public void reset(Translation2d value) {
         m_prevState = value;
         m_prevTime = MathSharedStore.getTimestamp();
+    }
+
+    public double getAngularRateLimit() { return m_angularRateLimit; }
+    public void setAngularRateLimit(double angularRateLimit) {
+        this.m_angularRateLimit = angularRateLimit;
+    }
+
+    public double getRadialRateLimit() { return m_radialRateLimit; }
+    public void setRadialRateLimit(double radialRateLimit) {
+        this.m_radialRateLimit = radialRateLimit;
     }
 }

@@ -13,18 +13,23 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
 
 public class Robot extends TimedRobot {
-  private final AnalogGyro m_gyro = new AnalogGyro(0);
-  private final XboxController m_controller = new XboxController(0);
-  private final Drivetrain m_swerve = new Drivetrain(m_gyro);
+  private final AnalogGyro analogGyro = new AnalogGyro(0);
+  private final XboxController operController = new XboxController(0);
+  private final Drivetrain chassis = new Drivetrain(analogGyro.getRotation2d());
 
   // Slew rate limiters to make joystick inputs more gentle; 1/3 sec from 0 to 1.
-  private final SkidLimiter m_skidLimiter = new SkidLimiter(3);
-  private final SlewRateLimiter m_rotLimiter = new SlewRateLimiter(3);
+  private final SkidLimiter skidLimiter = new SkidLimiter(2.5);
+  private final SlewRateLimiter rotLimiter = new SlewRateLimiter(3);
+
+  @Override
+  public void autonomousInit() {
+    analogGyro.reset();
+  }
 
   @Override
   public void autonomousPeriodic() {
     driveWithJoystick(false);
-    m_swerve.updateOdometry();
+    chassis.updateOdometry(analogGyro.getRotation2d());
   }
 
   @Override
@@ -35,26 +40,25 @@ public class Robot extends TimedRobot {
   private void driveWithJoystick(boolean fieldRelative) {
     // Get the x speed. We are inverting this because Xbox controllers return
     // negative values when we push forward.
-    final var xSpeed = -MathUtil.applyDeadband(m_controller.getLeftY(), 0.02);
+    final var xSpeed = -MathUtil.applyDeadband(operController.getLeftY(), 0.02) * Drivetrain.kMaxSpeed;
 
     // Get the y speed or sideways/strafe speed. We are inverting this because
     // we want a positive value when we pull to the left. Xbox controllers
     // return positive values when you pull to the right by default.
-    final var ySpeed = -MathUtil.applyDeadband(m_controller.getLeftX(), 0.02);
-
-    final var stick = m_skidLimiter.calculate(new Translation2d(xSpeed, ySpeed)).times(Drivetrain.kMaxSpeed);
+    final var ySpeed = -MathUtil.applyDeadband(operController.getLeftX(), 0.02) * Drivetrain.kMaxSpeed;
 
     // Get the rate of angular rotation. We are inverting this because we want a
     // positive value when we pull to the left (remember, CCW is positive in
     // mathematics). Xbox controllers return positive values when you pull to
     // the right by default.
-    final var rot =
-        -m_rotLimiter.calculate(MathUtil.applyDeadband(m_controller.getRightX(), 0.02))
-            * Drivetrain.kMaxAngularSpeed;
+    final var wSpeed = -MathUtil.applyDeadband(operController.getRightX(), 0.02) * Drivetrain.kMaxAngularSpeed;
+
+    final var move = skidLimiter.calculate(new Translation2d(xSpeed, ySpeed));
+    final var spin = rotLimiter.calculate(wSpeed);
 
     final ChassisSpeeds speeds = fieldRelative
-      ? ChassisSpeeds.fromFieldRelativeSpeeds(stick.getX(), stick.getY(), rot, m_gyro.getRotation2d())
-      : new ChassisSpeeds(stick.getX(), stick.getY(), rot);
-    m_swerve.drive(speeds, getPeriod());
+      ? ChassisSpeeds.fromFieldRelativeSpeeds(move.getX(), move.getY(), spin, analogGyro.getRotation2d())
+      : new ChassisSpeeds(move.getX(), move.getY(), spin);
+    chassis.drive(speeds, getPeriod());
   }
 }
