@@ -11,6 +11,8 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.AnalogGyro;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 
 public class Robot extends TimedRobot {
   private final AnalogGyro analogGyro = new AnalogGyro(0);
@@ -20,6 +22,12 @@ public class Robot extends TimedRobot {
   // Slew rate limiters to make joystick inputs more gentle; 1/3 sec from 0 to 1.
   private final SkidLimiter skidLimiter = new SkidLimiter(2.5);
   private final SlewRateLimiter rotLimiter = new SlewRateLimiter(3);
+
+  @Override
+  public void robotInit() {
+    ShuffleboardTab tab = Shuffleboard.getTab("Subsystems");
+    tab.add(chassis);
+  }
 
   @Override
   public void autonomousInit() {

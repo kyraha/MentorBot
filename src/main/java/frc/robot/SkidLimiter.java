@@ -5,7 +5,6 @@ package frc.robot;
 // the WPILib BSD license file in the root directory of this project.
 
 import edu.wpi.first.math.MathSharedStore;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
@@ -36,9 +35,10 @@ public class SkidLimiter {
      * value.
      *
      * @param angularRateLimit The arch rate-of-change limit at max radius, in radians per
-     *     second. This is expected to be strictly positive. Limit = 0 doesn't make sense.
-     * @param radialRateLimit The radial rate-of-change limit, in units per
-     *     second. This can be either positive number or 0 to disable radial limit.
+     *      second. This is expected to be strictly positive. Limit = 0 doesn't make sense.
+     * @param radialRateLimit The radial upper rate-of-change limit, in units per
+     *      second. This can be either positive number or 0 to disable radial limit.
+     *      There is no lower radial rate limit so deceleration is not limited.
      * @param initialValue The initial state. Also see reset()
      */
     public SkidLimiter(double angularRateLimit, double radialRateLimit, Translation2d initialValue) {
@@ -103,9 +103,10 @@ public class SkidLimiter {
             }
         }
         
-        if(m_radialRateLimit > 0) {
-            newNorm = prevNorm +
-                MathUtil.clamp(newNorm - prevNorm, -radialChangeLimit, radialChangeLimit);
+        if(m_radialRateLimit > 0 && newNorm-prevNorm > radialChangeLimit) {
+            // Only if there is a limit AND the change is greater than the limit
+            // then replace the new Norm with a limited value
+            newNorm = prevNorm + radialChangeLimit;
         }
 
         return new Translation2d(newNorm, newAngle);

@@ -34,18 +34,20 @@ public class TestSkidLimiter {
         double elapsedTime = 0.02; // Seconds
         double expectedRadians = ANGULAR_LIMIT * elapsedTime;
         Translation2d ghost = testLimiter.calculateDry(new Translation2d(1, Rotation2d.fromDegrees(90)), elapsedTime);
-        // System.out.println("Arch Ghost radius: " + ghost.getNorm());
-        // System.out.println("Arch Ghost radians: " + ghost.getAngle().getRadians());
         assertEquals(expectedRadians, ghost.getAngle().getRadians(), DELTA, "Wrong angle returned");
     }
 
     @Test
     void testLimitMagnitude() {
         double elapsedTime = 0.02; // Seconds
-        double expectedNorm = 1.0 - RADIAL_LIMIT * elapsedTime;
+        double expectedNorm = RADIAL_LIMIT * elapsedTime;
         Translation2d ghost = testLimiter.calculateDry(new Translation2d(0, 0), elapsedTime);
         // System.out.println("Norm Ghost radius: " + ghost.getNorm());
         // System.out.println("Norm Ghost radians: " + ghost.getAngle().getRadians());
-        assertEquals(expectedNorm, ghost.getNorm(), DELTA, "Wrong magnitude returned");
+        assertEquals(0, ghost.getNorm(), DELTA, "Wrong deceleration limit");
+
+        testLimiter.reset(ghost);
+        ghost = testLimiter.calculateDry(new Translation2d(0, 1), elapsedTime);
+        assertEquals(expectedNorm, ghost.getNorm(), DELTA, "Wrong acceleration limit");
     }
 }

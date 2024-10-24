@@ -35,6 +35,7 @@ public class SwerveModule implements Sendable {
   private final TalonFX steerMotor; // the steering motor
   private final TalonFX driveMotor; // the driving motor
   private final CANcoder absEncoder; // the can encoder attached to the steering shaft
+
   private final double absEncoderOffsetRadians;
   private final String moduleName; // to tell modules apart, e.g. on the ShuffleBoard
 
@@ -47,7 +48,6 @@ public class SwerveModule implements Sendable {
    * Mount point of the swerve module in meters relative to an agreed "center" of the robot
    */
   public final Translation2d mountPoint;
-
   /**
    * Constructs a SwerveModule with a drive motor, steering motor, drive encoder and steering encoder.
    *
@@ -58,32 +58,38 @@ public class SwerveModule implements Sendable {
    */
   public SwerveModule(JSONObject config) {
     moduleName = config.getString("name");
-    absEncoderOffsetRadians = config.getJSONObject("encoder").getDouble("offset");
+    var steerConfig = config.getJSONObject("steer");
+    var driveConfig = config.getJSONObject("drive");
+    var encoderConfig = config.getJSONObject("encoder");
+
+    steerMotor = new TalonFX(steerConfig.getInt("can"));
+    driveMotor = new TalonFX(driveConfig.getInt("can"));
+    absEncoder = new CANcoder(encoderConfig.getInt("can"));
+
+    absEncoderOffsetRadians = encoderConfig.getDouble("offset");
     mountPoint = new Translation2d(
         config.getJSONObject("location").getDouble("x"),
         config.getJSONObject("location").getDouble("y"));
 
-    steerMotor = new TalonFX(config.getJSONObject("steer").getInt("can"));
-    driveMotor = new TalonFX(config.getJSONObject("drive").getInt("can"));
-    absEncoder = new CANcoder(config.getJSONObject("encoder").getInt("can"));
-
     // Setup the steering PID controller
-    var steerPID = config.getJSONObject("steer");
     steerPIDController = new ProfiledPIDController(
-      steerPID.getDouble("kP"),
-      steerPID.getDouble("kI"),
-      steerPID.getDouble("kD"), steerConstraints);
+      steerConfig.getDouble("kP"),
+      steerConfig.getDouble("kI"),
+      steerConfig.getDouble("kD"), steerConstraints);
     steerPIDController.enableContinuousInput(-Math.PI, Math.PI); // wrap for circles
     steerPIDController.setTolerance(0.0025, 0.05); // at position tolerance
-    steeringFeedforward = new SimpleMotorFeedforward(steerPID.getDouble("kS"), steerPID.getDouble("kV"));
+    steeringFeedforward = new SimpleMotorFeedforward(
+      steerConfig.getDouble("kS"),
+      steerConfig.getDouble("kV"));
 
     // Setup the drive PID controller
-    var drivePID = config.getJSONObject("drive");
     drivePIDController = new PIDController(
-      drivePID.getDouble("kP"),
-      drivePID.getDouble("kI"),
-      drivePID.getDouble("kD"));
-      drivingFeedforward = new SimpleMotorFeedforward(drivePID.getDouble("kS"), drivePID.getDouble("kV"));
+      driveConfig.getDouble("kP"),
+      driveConfig.getDouble("kI"),
+      driveConfig.getDouble("kD"));
+    drivingFeedforward = new SimpleMotorFeedforward(
+      driveConfig.getDouble("kS"),
+      driveConfig.getDouble("kV"));
 
     resetSteeringPosition();
   }
@@ -94,7 +100,8 @@ public class SwerveModule implements Sendable {
    */
   @Override
   public void initSendable(SendableBuilder builder) {
-    builder.setSmartDashboardType(moduleName);
+    builder.setSmartDashboardType("Swerve Module");
+    builder.addStringProperty("Name", this::getName, null);
     builder.addDoubleProperty("X-offset", mountPoint::getX, null);
     builder.addDoubleProperty("Y-offset", mountPoint::getY, null);
     builder.addDoubleProperty("Mileage", this::getDrivePosition, null);
