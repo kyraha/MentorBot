@@ -8,16 +8,15 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj.AnalogGyro;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
+import frc.robot.sensors.NavX;
 
 public class Robot extends TimedRobot {
-  private final AnalogGyro analogGyro = new AnalogGyro(0);
   private final XboxController operController = new XboxController(0);
-  private final Drivetrain chassis = new Drivetrain(analogGyro.getRotation2d());
+  private final Drivetrain chassis = new Drivetrain(NavX.getRotation2d());
 
   // Slew rate limiters to make joystick inputs more gentle; 1/3 sec from 0 to 1.
   private final SkidLimiter skidLimiter = new SkidLimiter(2.5);
@@ -31,13 +30,13 @@ public class Robot extends TimedRobot {
 
   @Override
   public void autonomousInit() {
-    analogGyro.reset();
+    NavX.reset();
   }
 
   @Override
   public void autonomousPeriodic() {
     driveWithJoystick(false);
-    chassis.updateOdometry(analogGyro.getRotation2d());
+    chassis.updateOdometry(NavX.getRotation2d());
   }
 
   @Override
@@ -65,7 +64,7 @@ public class Robot extends TimedRobot {
     final var spin = rotLimiter.calculate(wSpeed);
 
     final ChassisSpeeds speeds = fieldRelative
-      ? ChassisSpeeds.fromFieldRelativeSpeeds(move.getX(), move.getY(), spin, analogGyro.getRotation2d())
+      ? ChassisSpeeds.fromFieldRelativeSpeeds(move.getX(), move.getY(), spin, NavX.getRotation2d())
       : new ChassisSpeeds(move.getX(), move.getY(), spin);
     chassis.drive(speeds, getPeriod());
   }

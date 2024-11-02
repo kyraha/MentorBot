@@ -24,11 +24,11 @@ import edu.wpi.first.math.geometry.Translation2d;
  * vector that can be further used to control a holonomic drive system.
  */
 public class SkidLimiter {
-    private double m_angularRateLimit;
-    private double m_radialRateLimit;
+    private double angularRateLimit;
+    private double radialRateLimit;
 
-    private Translation2d m_prevState;
-    private double m_prevTime;
+    private Translation2d storedState;
+    private double storedTime;
 
     /**
      * Creates a new SlewRateLimiter with the given positive and negative rate limits and initial
@@ -42,10 +42,10 @@ public class SkidLimiter {
      * @param initialValue The initial state. Also see reset()
      */
     public SkidLimiter(double angularRateLimit, double radialRateLimit, Translation2d initialValue) {
-        m_angularRateLimit = angularRateLimit;
-        m_radialRateLimit = radialRateLimit;
-        m_prevState = initialValue;
-        m_prevTime = MathSharedStore.getTimestamp();
+        this.angularRateLimit = angularRateLimit;
+        this.radialRateLimit = radialRateLimit;
+        this.storedState = initialValue;
+        this.storedTime = MathSharedStore.getTimestamp();
     }
 
     /**
@@ -65,11 +65,11 @@ public class SkidLimiter {
      */
     public Translation2d calculate(Translation2d input) {
         double currentTime = MathSharedStore.getTimestamp();
-        double elapsedTime = currentTime - m_prevTime;
-        m_prevState = calculateDry(input, elapsedTime);
-        m_prevTime = currentTime;
-        return m_prevState;
+        double elapsedTime = currentTime - storedTime;
+        storedTime = currentTime;
 
+        storedState = calculateDry(input, elapsedTime);
+        return storedState;
     }
 
     /**
@@ -81,14 +81,14 @@ public class SkidLimiter {
      * @return The new, allowed translation vector
      */
     public Translation2d calculateDry(Translation2d input, double elapsedTime) {
-        double angularChangeLimit = m_angularRateLimit * elapsedTime;
-        double radialChangeLimit = m_radialRateLimit * elapsedTime;
+        double angularChangeLimit = angularRateLimit * elapsedTime;
+        double radialChangeLimit = radialRateLimit * elapsedTime;
 
         double newNorm = input.getNorm();
-        double prevNorm = m_prevState.getNorm();
+        double prevNorm = storedState.getNorm();
 
         Rotation2d newAngle = input.getAngle();
-        Rotation2d prevAngle = m_prevState.getAngle();
+        Rotation2d prevAngle = storedState.getAngle();
 
         if(prevNorm > angularChangeLimit / Math.PI) {
             // Our theory is that angular limit should be inversly proportional to the magnitude
@@ -102,8 +102,9 @@ public class SkidLimiter {
                 newAngle = prevAngle.interpolate(newAngle, t);
             }
         }
-        
-        if(m_radialRateLimit > 0 && newNorm-prevNorm > radialChangeLimit) {
+
+        // Norms are never negative
+        if(radialRateLimit > 0 && newNorm-prevNorm > radialChangeLimit) {
             // Only if there is a limit AND the change is greater than the limit
             // then replace the new Norm with a limited value
             newNorm = prevNorm + radialChangeLimit;
@@ -118,17 +119,17 @@ public class SkidLimiter {
      * @param value The value to reset to.
      */
     public void reset(Translation2d value) {
-        m_prevState = value;
-        m_prevTime = MathSharedStore.getTimestamp();
+        storedState = value;
+        storedTime = MathSharedStore.getTimestamp();
     }
 
-    public double getAngularRateLimit() { return m_angularRateLimit; }
+    public double getAngularRateLimit() { return angularRateLimit; }
     public void setAngularRateLimit(double angularRateLimit) {
-        this.m_angularRateLimit = angularRateLimit;
+        this.angularRateLimit = angularRateLimit;
     }
 
-    public double getRadialRateLimit() { return m_radialRateLimit; }
+    public double getRadialRateLimit() { return radialRateLimit; }
     public void setRadialRateLimit(double radialRateLimit) {
-        this.m_radialRateLimit = radialRateLimit;
+        this.radialRateLimit = radialRateLimit;
     }
 }

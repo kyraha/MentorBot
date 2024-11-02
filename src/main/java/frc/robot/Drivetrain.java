@@ -7,12 +7,12 @@ package frc.robot;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
@@ -24,7 +24,7 @@ public class Drivetrain extends SubsystemBase {
   private final int nModules;
   private final SwerveModule[] swerveModules;
   private final SwerveDriveKinematics kinematics;
-  private final SwerveDriveOdometry odometry;
+  private final SwerveDrivePoseEstimator odometry;
   private final SwerveModulePosition[] currentPositions;
 
   public Drivetrain(Rotation2d initialRotation2d) {
@@ -45,10 +45,8 @@ public class Drivetrain extends SubsystemBase {
     }
     kinematics = new SwerveDriveKinematics(swerveLocations);
 
-    odometry = new SwerveDriveOdometry(
-      kinematics,
-      initialRotation2d,
-      currentPositions);
+    // odometry wrapper class that has functionality for cameras that report position with latency
+    odometry = new SwerveDrivePoseEstimator(kinematics, initialRotation2d, currentPositions, new Pose2d());
   }
 
   /**
