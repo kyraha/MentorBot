@@ -83,6 +83,8 @@ public class SkidLimiter {
     public Translation2d calculateDry(Translation2d input, double elapsedTime) {
         double angularChangeLimit = angularRateLimit * elapsedTime;
         double radialChangeLimit = radialRateLimit * elapsedTime;
+        double tA = 1;
+        double tR = 1;
 
         double newNorm = input.getNorm();
         double prevNorm = storedState.getNorm();
@@ -98,19 +100,22 @@ public class SkidLimiter {
             double desiredAngleAbsRadians = Math.abs(desiredRotation.getRadians());
             if(desiredAngleAbsRadians > allowedChangeRadians) {
                 // t is how far between the initial and end values we are. It should be bounded in [0, 1]
-                double t = allowedChangeRadians / desiredAngleAbsRadians;
-                newAngle = prevAngle.interpolate(newAngle, t);
+                tA = allowedChangeRadians / desiredAngleAbsRadians;
             }
         }
 
-        // Norms are never negative
-        if(radialRateLimit > 0 && newNorm-prevNorm > radialChangeLimit) {
-            // Only if there is a limit AND the change is greater than the limit
-            // then replace the new Norm with a limited value
-            newNorm = prevNorm + radialChangeLimit;
+        // Check the radial limits too but only if there is a limit
+        if(radialRateLimit > 0) {
+            double desiredIncrement = newNorm - prevNorm;
+            // Smaller norm (negative increment) is OK, it means braking
+            if(desiredIncrement > radialChangeLimit) {
+                // Calculate the ratio of allowed radial change. It should be bounded in [0, 1]
+                tR = radialChangeLimit / desiredIncrement;
+            }
         }
 
-        return new Translation2d(newNorm, newAngle);
+        final double t = Math.min(tR, tA);
+        return storedState.interpolate(input, t);
     }
 
     /**

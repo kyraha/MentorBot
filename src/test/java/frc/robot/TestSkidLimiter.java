@@ -33,7 +33,7 @@ public class TestSkidLimiter {
     void testLimitArch() {
         double elapsedTime = 0.02; // Seconds
         double expectedRadians = ANGULAR_LIMIT * elapsedTime;
-        Translation2d ghost = testLimiter.calculateDry(new Translation2d(1, Rotation2d.fromDegrees(90)), elapsedTime);
+        Translation2d ghost = testLimiter.calculateDry(new Translation2d(1, Rotation2d.fromDegrees(30)), elapsedTime);
         assertEquals(expectedRadians, ghost.getAngle().getRadians(), DELTA, "Wrong angle returned");
     }
 
@@ -42,12 +42,23 @@ public class TestSkidLimiter {
         double elapsedTime = 0.02; // Seconds
         double expectedNorm = RADIAL_LIMIT * elapsedTime;
         Translation2d ghost = testLimiter.calculateDry(new Translation2d(0, 0), elapsedTime);
-        // System.out.println("Norm Ghost radius: " + ghost.getNorm());
-        // System.out.println("Norm Ghost radians: " + ghost.getAngle().getRadians());
         assertEquals(0, ghost.getNorm(), DELTA, "Wrong deceleration limit");
 
         testLimiter.reset(ghost);
         ghost = testLimiter.calculateDry(new Translation2d(0, 1), elapsedTime);
         assertEquals(expectedNorm, ghost.getNorm(), DELTA, "Wrong acceleration limit");
+    }
+
+    @Test
+    void testContinious() {
+        // 45 degrees is about 0.8 radians so let's iterate 8 times
+        for (int i = 0; i < 8; i++) {
+            double elapsedTime = 0.1; // Seconds
+            Translation2d fullThrottle = new Translation2d(1,1);
+            var ghost = testLimiter.calculateDry(fullThrottle, elapsedTime);
+            assertEquals(1.0, ghost.getX(), DELTA, "X should stay at 1.0");
+            assertEquals(1.4*i*elapsedTime, ghost.getY(), 0.15, "Y should gradually grow");
+            testLimiter.reset(ghost);
+        }
     }
 }
