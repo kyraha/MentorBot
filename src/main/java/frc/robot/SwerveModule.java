@@ -190,6 +190,11 @@ public class SwerveModule implements Sendable {
         steeringFeedforward.calculate(steerPIDController.getSetpoint().velocity);
 
     driveMotor.setVoltage(driveOutput + driveFeedforward);
-    steerMotor.setVoltage(turnOutput + turnFeedforward);
+    if (state.speedMetersPerSecond == 0) {
+      steerMotor.setVoltage(0);
+    }
+    else {
+      steerMotor.setVoltage(turnOutput + turnFeedforward);
+    }
   }
 }
