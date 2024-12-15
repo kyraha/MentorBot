@@ -6,48 +6,41 @@ package frc.robot;
 
 import org.json.JSONObject;
 
+import com.ctre.phoenix6.configs.FeedbackConfigs;
+import com.ctre.phoenix6.configs.MotionMagicConfigs;
+import com.ctre.phoenix6.configs.Slot0Configs;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.MotionMagicDutyCycle;
+import com.ctre.phoenix6.controls.VelocityDutyCycle;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 
-import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.util.sendable.SendableBuilder;
 
 public class SwerveModule implements Sendable {
-  private static final TrapezoidProfile.Constraints steerConstraints =
-    new TrapezoidProfile.Constraints(13, 30);
-
-  // TBD: Should we move these static constants to the config?
-  private static final double kWheelRadius = 0.0508; // in meters
-  private static final double steerGearRatio = 21.42857; // Checked 2/2/24 //150d/7d = 21.42857  checked 1/19
-  private static final double driveGearRatio = 6.12; // Checked 2/2/24 //6.75  checked 1/19/23
-
-  private static final double steerRotToRads = 2.0 * Math.PI / steerGearRatio;
-  private static final double driveRotToMeters = 2.0 * Math.PI * kWheelRadius / driveGearRatio;
+  private static final double kMaxSteerAcceleration = 6;  // Rotations per sec per sec
+  private static final double kMaxSteerVelocity = 3;      // Rotations per second
 
   private final TalonFX steerMotor; // the steering motor
   private final TalonFX driveMotor; // the driving motor
   private final CANcoder absEncoder; // the can encoder attached to the steering shaft
 
-  private final double absEncoderOffsetRadians;
+  private final double absEncoderOffsetRotations;
   private final String moduleName; // to tell modules apart, e.g. on the ShuffleBoard
 
-  private final PIDController drivePIDController;
-  private final ProfiledPIDController steerPIDController;
-  private final SimpleMotorFeedforward drivingFeedforward;
-  private final SimpleMotorFeedforward steeringFeedforward;
+  private final MotionMagicDutyCycle steerRequest;
+  private final VelocityDutyCycle driveRequest;
 
   /**
    * Mount point of the swerve module in meters relative to an agreed "center" of the robot
    */
   public final Translation2d mountPoint;
+
   /**
    * Constructs a SwerveModule with a drive motor, steering motor, drive encoder and steering encoder.
    *
@@ -61,37 +54,52 @@ public class SwerveModule implements Sendable {
     var steerConfig = config.getJSONObject("steer");
     var driveConfig = config.getJSONObject("drive");
     var encoderConfig = config.getJSONObject("encoder");
+    double wheelRadius = Double.parseDouble(config.getString("wheelRadius")); // in meters
+    absEncoderOffsetRotations = encoderConfig.getDouble("offset"); // in rotations
+
+    var steerSettings = new TalonFXConfiguration()
+      .withFeedback(new FeedbackConfigs()
+        .withSensorToMechanismRatio(steerConfig.getDouble("gearing")))
+      .withSlot0(new Slot0Configs()
+        .withKP(steerConfig.getDouble("kP"))
+        .withKI(steerConfig.getDouble("kI"))
+        .withKD(steerConfig.getDouble("kD"))
+        .withKS(steerConfig.getDouble("kS"))
+        .withKV(steerConfig.getDouble("kV"))
+        .withKA(steerConfig.getDouble("kA"))
+      )
+      .withMotionMagic(new MotionMagicConfigs()
+        .withMotionMagicAcceleration(kMaxSteerAcceleration)
+        .withMotionMagicCruiseVelocity(kMaxSteerVelocity)
+      );
+    var driveSettings = new TalonFXConfiguration()
+      .withFeedback(new FeedbackConfigs()
+        .withSensorToMechanismRatio(driveConfig.getDouble("gearing") / (2.0 * Math.PI * wheelRadius)))
+      .withSlot0(new Slot0Configs()
+        .withKP(driveConfig.getDouble("kP"))
+        .withKI(driveConfig.getDouble("kI"))
+        .withKD(driveConfig.getDouble("kD"))
+        .withKS(driveConfig.getDouble("kS"))
+        .withKV(driveConfig.getDouble("kV"))
+        .withKA(driveConfig.getDouble("kA"))
+      );
 
     steerMotor = new TalonFX(steerConfig.getInt("can"));
     driveMotor = new TalonFX(driveConfig.getInt("can"));
     absEncoder = new CANcoder(encoderConfig.getInt("can"));
 
-    absEncoderOffsetRadians = encoderConfig.getDouble("offset");
+    steerMotor.getConfigurator().apply(steerSettings);
+    driveMotor.getConfigurator().apply(driveSettings);
+
     mountPoint = new Translation2d(
-        config.getJSONObject("location").getDouble("x"),
-        config.getJSONObject("location").getDouble("y"));
+      config.getJSONObject("location").getDouble("x"),
+      config.getJSONObject("location").getDouble("y"));
 
-    // Setup the steering PID controller
-    steerPIDController = new ProfiledPIDController(
-      steerConfig.getDouble("kP"),
-      steerConfig.getDouble("kI"),
-      steerConfig.getDouble("kD"), steerConstraints);
-    steerPIDController.enableContinuousInput(-Math.PI, Math.PI); // wrap for circles
-    steerPIDController.setTolerance(0.0025, 0.05); // at position tolerance
-    steeringFeedforward = new SimpleMotorFeedforward(
-      steerConfig.getDouble("kS"),
-      steerConfig.getDouble("kV"));
+    // Set the current reading of the steering angle from the abs encoder once and forever
+    steerMotor.setPosition(absEncoder.getAbsolutePosition().getValueAsDouble() - absEncoderOffsetRotations);
 
-    // Setup the drive PID controller
-    drivePIDController = new PIDController(
-      driveConfig.getDouble("kP"),
-      driveConfig.getDouble("kI"),
-      driveConfig.getDouble("kD"));
-    drivingFeedforward = new SimpleMotorFeedforward(
-      driveConfig.getDouble("kS"),
-      driveConfig.getDouble("kV"));
-
-    resetSteeringPosition();
+    steerRequest = new MotionMagicDutyCycle(0, false, 0, 0, true, false, false);
+    driveRequest = new VelocityDutyCycle(0, 0, false, 0, 0, false, false, false);
   }
 
   /**
@@ -107,19 +115,6 @@ public class SwerveModule implements Sendable {
     builder.addDoubleProperty("Mileage", this::getDrivePosition, null);
     builder.addDoubleProperty("Speed", this::getDriveVelocity, null);
     builder.addDoubleProperty("Azimuth", this::getSteerDegrees, null);
-  }
-
-  /**
-   * Resets the steering motor position sensor to the current reading from the
-   * absolute encoder. This operation is needed most likely only once at the power up.
-   */
-  public void resetSteeringPosition() {
-    // Read absolute encoder position in rotations
-    double absRotations = absEncoder.getAbsolutePosition().getValueAsDouble();
-    // Subtract the offset (in rotations) to find the real steering angle
-    double actualRotations = (absRotations - absEncoderOffsetRadians/(2.0*Math.PI));
-    // And store the result into the steer motor scaled up by the gear ratio
-    steerMotor.setPosition(actualRotations * steerGearRatio);
   }
 
   /**
@@ -141,7 +136,7 @@ public class SwerveModule implements Sendable {
   }
 
   public Rotation2d getSteerRotation2d() {
-    return Rotation2d.fromRadians(steerMotor.getPosition().getValueAsDouble() * steerRotToRads);
+    return Rotation2d.fromRotations(steerMotor.getPosition().getValueAsDouble());
   }
 
   public double getSteerDegrees() {
@@ -149,11 +144,11 @@ public class SwerveModule implements Sendable {
   }
 
   public double getDrivePosition() {
-    return driveMotor.getPosition().getValueAsDouble() * driveRotToMeters;
+    return driveMotor.getPosition().getValueAsDouble();
   }
 
   public double getDriveVelocity() {
-    return driveMotor.getVelocity().getValueAsDouble() * driveRotToMeters;
+    return driveMotor.getVelocity().getValueAsDouble();
   }
 
   public String getName() {
@@ -171,30 +166,16 @@ public class SwerveModule implements Sendable {
     // Optimize the reference state to avoid spinning further than 90 degrees
     SwerveModuleState state = SwerveModuleState.optimize(desiredState, currentAngle);
 
+    if (state.speedMetersPerSecond != 0) {
+      // Steer only if want to move. Otherwise it will unnecessarily reset to zero all the time
+      steerMotor.setControl(steerRequest.withPosition(state.angle.getRotations()));
+    }
+
     // Scale speed by cosine of angle error. This scales down movement perpendicular to the desired
     // direction of travel that can occur when modules change directions. This results in smoother
     // driving.
     state.speedMetersPerSecond *= state.angle.minus(currentAngle).getCos();
 
-    // Calculate the drive output from the drive PID controller.
-    final double driveOutput =
-        drivePIDController.calculate(getDriveVelocity(), state.speedMetersPerSecond);
-
-    final double driveFeedforward = drivingFeedforward.calculate(state.speedMetersPerSecond);
-
-    // Calculate the turning motor output from the turning PID controller.
-    final double turnOutput =
-        steerPIDController.calculate(currentAngle.getRadians(), state.angle.getRadians());
-
-    final double turnFeedforward =
-        steeringFeedforward.calculate(steerPIDController.getSetpoint().velocity);
-
-    driveMotor.setVoltage(driveOutput + driveFeedforward);
-    if (state.speedMetersPerSecond == 0) {
-      steerMotor.setVoltage(0);
-    }
-    else {
-      steerMotor.setVoltage(turnOutput + turnFeedforward);
-    }
+    driveMotor.setControl(driveRequest.withVelocity(state.speedMetersPerSecond));
   }
 }

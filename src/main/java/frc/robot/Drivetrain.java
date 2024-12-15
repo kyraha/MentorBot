@@ -28,7 +28,7 @@ public class Drivetrain extends SubsystemBase {
   private final SwerveModulePosition[] currentPositions;
 
   public Drivetrain(Rotation2d initialRotation2d) {
-    JSONObject drivetrainConfig = ConfigReader.readConfig("DrivetrainConfig.json");
+    JSONObject drivetrainConfig = ConfigReader.readConfig("DrivetrainConfigShowstoperr.json");
     JSONArray swerveModulesConfig = drivetrainConfig.getJSONArray("swerveModules");
     nModules = swerveModulesConfig.length();
     currentPositions = new SwerveModulePosition[nModules];

@@ -1,0 +1,135 @@
+{
+"swerveModules": [
+  {
+    "name": "One FR",
+    "wheelRadius": 0.0508,
+    "steer": {
+      "can": 2,
+      "gearing": 21.42857,
+      "kP": 0.7,
+      "kI": 0,
+      "kD": 0.005,
+      "kS": 0,
+      "kV": 0,
+      "kA": 0
+    },
+    "drive": {
+      "can": 3,
+      "gearing": 6.12,
+      "kP": 0.1,
+      "kI": 0,
+      "kD": 0,
+      "kS": 0,
+      "kV": 0.2,
+      "kA": 0
+    },
+    "encoder": {
+      "can": 10,
+      "offset": -2.856
+    },
+    "location": {
+      "x": 0.292,
+      "y": -0.292
+    }
+  },
+
+  {
+    "name": "Two BR",
+    "wheelRadius": 0.0508,
+    "steer": {
+      "can": 4,
+      "gearing": 21.42857,
+      "kP": 0.7,
+      "kI": 0,
+      "kD": 0.005,
+      "kS": 0,
+      "kV": 0,
+      "kA": 0
+    },
+    "drive": {
+      "can": 5,
+      "gearing": 6.12,
+      "kP": 0.1,
+      "kI": 0,
+      "kD": 0,
+      "kS": 0,
+      "kV": 0.2,
+      "kA": 0
+    },
+    "encoder": {
+      "can": 11,
+      "offset": 2.1107
+    },
+    "location": {
+      "x": -0.292,
+      "y": -0.292
+    }
+  },
+
+  {
+    "name": "Three BL",
+    "wheelRadius": 0.0508,
+    "steer": {
+      "can": 6,
+      "gearing": 21.42857,
+      "kP": 0.7,
+      "kI": 0,
+      "kD": 0.005,
+      "kS": 0,
+      "kV": 0,
+      "kA": 0
+    },
+    "drive": {
+      "can": 7,
+      "gearing": 6.12,
+      "kP": 0.1,
+      "kI": 0,
+      "kD": 0,
+      "kS": 0,
+      "kV": 0.2,
+      "kA": 0
+    },
+    "encoder": {
+      "can": 12,
+      "offset": 1.7855
+    },
+    "location": {
+      "x": -0.292,
+      "y": 0.292
+    }
+  },
+
+  {
+    "name": "Four FL",
+    "wheelRadius": 0.0508,
+    "steer": {
+      "can": 8,
+      "gearing": 21.42857,
+      "kP": 0.7,
+      "kI": 0,
+      "kD": 0.005,
+      "kS": 0,
+      "kV": 0,
+      "kA": 0
+    },
+    "drive": {
+      "can": 9,
+      "gearing": 6.12,
+      "kP": 0.1,
+      "kI": 0,
+      "kD": 0,
+      "kS": 0,
+      "kV": 0.2,
+      "kA": 0
+    },
+    "encoder": {
+      "can": 13,
+      "offset": 0.56143
+    },
+    "location": {
+      "x": 0.292,
+      "y": 0.292
+    }
+  }
+]
+}
