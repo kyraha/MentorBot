@@ -6,6 +6,7 @@ package frc.robot;
 
 import org.json.JSONObject;
 
+import com.ctre.phoenix6.configs.ClosedLoopGeneralConfigs;
 import com.ctre.phoenix6.configs.FeedbackConfigs;
 import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
@@ -56,10 +57,13 @@ public class SwerveModule implements Sendable {
     var encoderConfig = config.getJSONObject("encoder");
     double wheelRadius = Double.parseDouble(config.getString("wheelRadius")); // in meters
     absEncoderOffsetRotations = encoderConfig.getDouble("offset"); // in rotations
+    var wrapConfig = new ClosedLoopGeneralConfigs();
+    wrapConfig.ContinuousWrap = true;
 
     var steerSettings = new TalonFXConfiguration()
       .withFeedback(new FeedbackConfigs()
         .withSensorToMechanismRatio(steerConfig.getDouble("gearing")))
+      .withClosedLoopGeneral(wrapConfig)
       .withSlot0(new Slot0Configs()
         .withKP(steerConfig.getDouble("kP"))
         .withKI(steerConfig.getDouble("kI"))
@@ -72,6 +76,7 @@ public class SwerveModule implements Sendable {
         .withMotionMagicAcceleration(kMaxSteerAcceleration)
         .withMotionMagicCruiseVelocity(kMaxSteerVelocity)
       );
+
     var driveSettings = new TalonFXConfiguration()
       .withFeedback(new FeedbackConfigs()
         .withSensorToMechanismRatio(driveConfig.getDouble("gearing") / (2.0 * Math.PI * wheelRadius)))
