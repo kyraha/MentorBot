@@ -27,8 +27,14 @@ public class Drivetrain extends SubsystemBase {
   private final SwerveDrivePoseEstimator odometry;
   private final SwerveModulePosition[] currentPositions;
 
+  /**
+   * Swerve drivetrain, configurable by a JSON Config file that has to be present in the 'deploy' directory
+   * * DrivetrainConfigPrototypERR.json
+   * * DrivetrainConfigShowstoperr.json
+   * @param initialRotation2d The initial rotation reported by an external gyro, e.g. NavX
+   */
   public Drivetrain(Rotation2d initialRotation2d) {
-    JSONObject drivetrainConfig = ConfigReader.readConfig("DrivetrainConfigShowstoperr.json");
+    JSONObject drivetrainConfig = ConfigReader.readConfig("DrivetrainConfigPrototypERR.json");
     JSONArray swerveModulesConfig = drivetrainConfig.getJSONArray("swerveModules");
     nModules = swerveModulesConfig.length();
     currentPositions = new SwerveModulePosition[nModules];
@@ -36,7 +42,7 @@ public class Drivetrain extends SubsystemBase {
     var swerveLocations = new Translation2d[nModules];
 
     for (int i=0; i < nModules; i++) {
-      var configObject = (JSONObject) swerveModulesConfig.get(i);
+      var configObject = swerveModulesConfig.getJSONObject(i);
       var oneModule = new SwerveModule(configObject);
       swerveModules[i] = oneModule;
       swerveLocations[i] = oneModule.mountPoint;
