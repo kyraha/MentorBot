@@ -5,7 +5,6 @@
 package frc.robot.sensors;
 
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.SPI;
 import com.studica.frc.AHRS;
 
 /** Add your docs here. */

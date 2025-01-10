@@ -165,22 +165,23 @@ public class SwerveModule implements Sendable {
    *
    * @param desiredState Desired state with speed and angle.
    */
-  public void setDesiredState(SwerveModuleState desiredState) {
+  public void setDesiredState(SwerveModuleState state) {
+    if (state.speedMetersPerSecond == 0) {
+      // If the new state is with speed=0 then simply stop and don't change steering
+      driveMotor.setControl(driveRequest.withVelocity(0));
+      return;
+    }
+
     var currentAngle = getSteerRotation2d();
 
     // Optimize the reference state to avoid spinning further than 90 degrees
-    SwerveModuleState state = SwerveModuleState.optimize(desiredState, currentAngle);
-
-    if (state.speedMetersPerSecond != 0) {
-      // Steer only if want to move. Otherwise it will unnecessarily reset to zero all the time
-      steerMotor.setControl(steerRequest.withPosition(state.angle.getRotations()));
-    }
+    state.optimize(currentAngle);
+    steerMotor.setControl(steerRequest.withPosition(state.angle.getRotations()));
 
     // Scale speed by cosine of angle error. This scales down movement perpendicular to the desired
     // direction of travel that can occur when modules change directions. This results in smoother
     // driving.
     state.speedMetersPerSecond *= state.angle.minus(currentAngle).getCos();
-
     driveMotor.setControl(driveRequest.withVelocity(state.speedMetersPerSecond));
   }
 }
