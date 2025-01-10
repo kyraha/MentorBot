@@ -103,8 +103,8 @@ public class SwerveModule implements Sendable {
     // Set the current reading of the steering angle from the abs encoder once and forever
     steerMotor.setPosition(absEncoder.getAbsolutePosition().getValueAsDouble() - absEncoderOffsetRotations);
 
-    steerRequest = new MotionMagicDutyCycle(0, false, 0, 0, true, false, false);
-    driveRequest = new VelocityDutyCycle(0, 0, false, 0, 0, false, false, false);
+    steerRequest = new MotionMagicDutyCycle(0);
+    driveRequest = new VelocityDutyCycle(0);
   }
 
   /**
