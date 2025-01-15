@@ -4,9 +4,6 @@
 
 package frc.robot;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -34,15 +31,15 @@ public class Drivetrain extends SubsystemBase {
    * @param initialRotation2d The initial rotation reported by an external gyro, e.g. NavX
    */
   public Drivetrain(Rotation2d initialRotation2d) {
-    JSONObject drivetrainConfig = ConfigReader.readConfig("DrivetrainConfigPrototypERR.json");
-    JSONArray swerveModulesConfig = drivetrainConfig.getJSONArray("swerveModules");
-    nModules = swerveModulesConfig.length();
+    var drivetrainConfig = ConfigReader.readConfig("DrivetrainConfigPrototypERR.json");
+    var swerveModulesConfig = drivetrainConfig.getAsJsonObject().getAsJsonArray("swerveModules");
+    nModules = swerveModulesConfig.size();
     currentPositions = new SwerveModulePosition[nModules];
     swerveModules = new SwerveModule[nModules];
     var swerveLocations = new Translation2d[nModules];
 
     for (int i=0; i < nModules; i++) {
-      var configObject = swerveModulesConfig.getJSONObject(i);
+      var configObject = swerveModulesConfig.get(i).getAsJsonObject();
       var oneModule = new SwerveModule(configObject);
       swerveModules[i] = oneModule;
       swerveLocations[i] = oneModule.mountPoint;
