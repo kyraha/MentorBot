@@ -31,7 +31,7 @@ public class SwerveModule implements Sendable {
   private final CANcoder absEncoder; // the can encoder attached to the steering shaft
 
   private final double absEncoderOffsetRotations;
-  private final String moduleName; // to tell modules apart, e.g. on the ShuffleBoard
+  private final String moduleName; // to tell modules apart, e.g. in the Network Tables
 
   private final MotionMagicDutyCycle steerRequest;
   private final VelocityDutyCycle driveRequest;
@@ -107,7 +107,7 @@ public class SwerveModule implements Sendable {
   }
 
   /**
-   * Builds the sendable for shuffleboard
+   * Builds the sendable for Network Tables
    * @param builder sendable builder
    */
   @Override

@@ -89,13 +89,14 @@ public class SkidLimiter {
         double newNorm = input.getNorm();
         double prevNorm = storedState.getNorm();
 
-        Rotation2d newAngle = input.getAngle();
-        Rotation2d prevAngle = storedState.getAngle();
-
         if(prevNorm > angularChangeLimit / Math.PI && newNorm > 0) {
+            Rotation2d newAngle = input.getAngle();
+            Rotation2d prevAngle = storedState.getAngle();
+    
             // Our theory is that angular limit should be inversly proportional to the magnitude
             // The simplest formula would be "Const / Norm" for the starters <-- edit this statement if theory changes
             double allowedChangeRadians = angularChangeLimit / prevNorm;
+
             Rotation2d desiredRotation = newAngle.minus(prevAngle);
             double desiredAngleAbsRadians = Math.abs(desiredRotation.getRadians());
             if(desiredAngleAbsRadians > allowedChangeRadians) {

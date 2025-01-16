@@ -8,10 +8,9 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.PS5Controller;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
+import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.sensors.NavX;
 
 public class Robot extends TimedRobot {
@@ -24,8 +23,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void robotInit() {
-    ShuffleboardTab tab = Shuffleboard.getTab("Subsystems");
-    tab.add(chassis);
+    SmartDashboard.putData(chassis);
   }
 
   @Override
