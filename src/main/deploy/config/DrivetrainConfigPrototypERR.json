@@ -1,8 +1,12 @@
 {
+"externalGyro": {
+  "type": "Pigeon2",
+  "can": 0
+},
 "swerveModules": [
   {
     "name": "One FL",
-    "wheelRadius": 0.0508,
+    "wheelRadius": 0.05,
     "steer": {
       "can": 6,
       "gearing": 18.75,
@@ -15,7 +19,7 @@
     },
     "drive": {
       "can": 7,
-      "gearing": 6.75,
+      "gearing": 5.9,
       "kP": 0.1,
       "kI": 0,
       "kD": 0,
@@ -28,17 +32,17 @@
       "offset": 0.110840
     },
     "location": {
-      "x": 0.292,
-      "y": 0.292
+      "x": 0.324,
+      "y": 0.324
     }
   },
 
   {
     "name": "Two FR",
-    "wheelRadius": 0.0508,
+    "wheelRadius": 0.05,
     "steer": {
       "can": 9,
-      "gearing": 21.42857,
+      "gearing": 18.75,
       "kP": 0.7,
       "kI": 0,
       "kD": 0.005,
@@ -48,7 +52,7 @@
     },
     "drive": {
       "can": 8,
-      "gearing": 6.12,
+      "gearing": 5.9,
       "kP": 0.1,
       "kI": 0,
       "kD": 0,
@@ -61,14 +65,14 @@
       "offset": 0.069580
     },
     "location": {
-      "x": 0.292,
-      "y": -0.292
+      "x": 0.324,
+      "y": -0.324
     }
   },
 
   {
     "name": "Three BR",
-    "wheelRadius": 0.0508,
+    "wheelRadius": 0.05,
     "steer": {
       "can": 11,
       "gearing": 21.42857,
@@ -81,7 +85,7 @@
     },
     "drive": {
       "can": 10,
-      "gearing": 6.12,
+      "gearing": 6.75,
       "kP": 0.1,
       "kI": 0,
       "kD": 0,
@@ -94,14 +98,14 @@
       "offset": -0.378906
     },
     "location": {
-      "x": -0.292,
-      "y": -0.292
+      "x": -0.324,
+      "y": -0.324
     }
   },
 
   {
     "name": "Four BL",
-    "wheelRadius": 0.0508,
+    "wheelRadius": 0.05,
     "steer": {
       "can": 13,
       "gearing": 21.42857,
@@ -114,7 +118,7 @@
     },
     "drive": {
       "can": 12,
-      "gearing": 6.12,
+      "gearing": 6.75,
       "kP": 0.1,
       "kI": 0,
       "kD": 0,
@@ -127,8 +131,8 @@
       "offset": 0.425049
     },
     "location": {
-      "x": -0.292,
-      "y": 0.292
+      "x": -0.324,
+      "y": 0.324
     }
   }
 ]

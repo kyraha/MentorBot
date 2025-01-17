@@ -4,9 +4,10 @@
 
 package frc.robot;
 
+import com.ctre.phoenix6.hardware.Pigeon2;
+
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -23,6 +24,7 @@ public class Drivetrain extends SubsystemBase {
   private final SwerveDriveKinematics kinematics;
   private final SwerveDrivePoseEstimator odometry;
   private final SwerveModulePosition[] currentPositions;
+  private final Pigeon2 gyro;
 
   /**
    * Swerve drivetrain, configurable by a JSON Config file that has to be present in the 'deploy' directory
@@ -30,9 +32,14 @@ public class Drivetrain extends SubsystemBase {
    * * DrivetrainConfigShowstoperr.json
    * @param initialRotation2d The initial rotation reported by an external gyro, e.g. NavX
    */
-  public Drivetrain(Rotation2d initialRotation2d) {
-    var drivetrainConfig = ConfigReader.readConfig("DrivetrainConfigPrototypERR.json");
-    var swerveModulesConfig = drivetrainConfig.getAsJsonObject().getAsJsonArray("swerveModules");
+  public Drivetrain() {
+    var drivetrainConfig = ConfigReader.readConfig("DrivetrainConfigPrototypERR.json").getAsJsonObject();
+    var gyroSettings = drivetrainConfig.getAsJsonObject("externalGyro");
+    // The "type" must be "Pigeon2". Maybe extend this logic to use any devices. Maybe in the future
+    var pigeonCAN = gyroSettings.getAsJsonPrimitive("can").getAsInt();
+    gyro = new Pigeon2(pigeonCAN);
+
+    var swerveModulesConfig = drivetrainConfig.getAsJsonArray("swerveModules");
     nModules = swerveModulesConfig.size();
     currentPositions = new SwerveModulePosition[nModules];
     swerveModules = new SwerveModule[nModules];
@@ -49,7 +56,7 @@ public class Drivetrain extends SubsystemBase {
     kinematics = new SwerveDriveKinematics(swerveLocations);
 
     // odometry wrapper class that has functionality for cameras that report position with latency
-    odometry = new SwerveDrivePoseEstimator(kinematics, initialRotation2d, currentPositions, new Pose2d());
+    odometry = new SwerveDrivePoseEstimator(kinematics, gyro.getRotation2d(), currentPositions, new Pose2d());
   }
 
   /**
@@ -68,11 +75,11 @@ public class Drivetrain extends SubsystemBase {
   }
 
   /** Updates the field relative position of the robot. */
-  public Pose2d updateOdometry(Rotation2d externalRotation2d) {
+  public Pose2d updateOdometry() {
     for (int i=0; i < nModules; i++) {
       currentPositions[i] = swerveModules[i].getPosition();
     }
-    return odometry.update(externalRotation2d, currentPositions);
+    return odometry.update(gyro.getRotation2d(), currentPositions);
   }
 
 }

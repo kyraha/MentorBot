@@ -7,16 +7,20 @@ import org.junit.jupiter.api.Test;
 
 /** Add your docs here. */
 public class TestConfigs {
+    private static String configName = "DrivetrainConfigPrototypERR.json";
     @Test
     void simpleTest() {
-        var drivetrainConfig = ConfigReader.readConfig("DrivetrainConfig.json");
+        var drivetrainConfig = ConfigReader.readConfig(configName);
         var swerveModulesConfig = drivetrainConfig.getAsJsonObject().getAsJsonArray("swerveModules");
         var nModules = swerveModulesConfig.size();
         assertEquals(4, nModules, "Should be 4 swerve modules");
         for(int i=0; i < nModules; i++) {
-            var module = swerveModulesConfig.get(i).getAsJsonObject();
-            assertTrue(module.has("name"), "Swerve module must have a name");
-            assertTrue(module.getAsJsonPrimitive("name").getAsString().length() > 5, "Name must be longer than 5");
+            var moduleConf = swerveModulesConfig.get(i).getAsJsonObject();
+            assertTrue(moduleConf.has("name"), "Swerve module must have a name");
+            var moduleName = moduleConf.getAsJsonPrimitive("name").getAsString();
+            assertTrue(moduleName.length() > 5, "Name must be longer than 5");
+            var oneModule = new SwerveModule(moduleConf);
+            assertEquals(moduleName, oneModule.getName(), "Module name should get assigned");
         }
     }
 
