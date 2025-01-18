@@ -1,14 +1,14 @@
 {
 "externalGyro": {
   "type": "Pigeon2",
-  "can": 1
+  "can": {"id": 1, "bus": "Cancun"}
 },
 "swerveModules": [
   {
     "name": "One FL",
     "wheelRadius": 0.05,
     "steer": {
-      "can": 6,
+      "can": {"id": 6, "bus": "rio"},
       "gearing": 18.75,
       "kP": 0.7,
       "kI": 0,
@@ -18,7 +18,7 @@
       "kA": 0
     },
     "drive": {
-      "can": 7,
+      "can": {"id": 7, "bus": "rio"},
       "gearing": 5.9,
       "kP": 0.1,
       "kI": 0,
@@ -28,7 +28,7 @@
       "kA": 0
     },
     "encoder": {
-      "can": 1,
+      "can": {"id": 1, "bus": "rio"},
       "offset": 0.110840
     },
     "location": {
@@ -41,7 +41,7 @@
     "name": "Two FR",
     "wheelRadius": 0.05,
     "steer": {
-      "can": 9,
+      "can": {"id": 9, "bus": "rio"},
       "gearing": 18.75,
       "kP": 0.7,
       "kI": 0,
@@ -51,7 +51,7 @@
       "kA": 0
     },
     "drive": {
-      "can": 8,
+      "can": {"id": 8, "bus": "rio"},
       "gearing": 5.9,
       "kP": 0.1,
       "kI": 0,
@@ -61,7 +61,7 @@
       "kA": 0
     },
     "encoder": {
-      "can": 2,
+      "can": {"id": 2, "bus": "rio"},
       "offset": 0.069580
     },
     "location": {
@@ -74,7 +74,7 @@
     "name": "Three BR",
     "wheelRadius": 0.05,
     "steer": {
-      "can": 11,
+      "can": {"id": 11, "bus": "rio"},
       "gearing": 21.42857,
       "kP": 0.7,
       "kI": 0,
@@ -84,7 +84,7 @@
       "kA": 0
     },
     "drive": {
-      "can": 10,
+      "can": {"id": 10, "bus": "rio"},
       "gearing": 6.75,
       "kP": 0.1,
       "kI": 0,
@@ -94,7 +94,7 @@
       "kA": 0
     },
     "encoder": {
-      "can": 3,
+      "can": {"id": 3, "bus": "rio"},
       "offset": -0.378906
     },
     "location": {
@@ -107,7 +107,7 @@
     "name": "Four BL",
     "wheelRadius": 0.05,
     "steer": {
-      "can": 13,
+      "can": {"id": 13, "bus": "rio"},
       "gearing": 21.42857,
       "kP": 0.7,
       "kI": 0,
@@ -117,7 +117,7 @@
       "kA": 0
     },
     "drive": {
-      "can": 12,
+      "can": {"id": 12, "bus": "rio"},
       "gearing": 6.75,
       "kP": 0.1,
       "kI": 0,
@@ -127,7 +127,7 @@
       "kA": 0
     },
     "encoder": {
-      "can": 4,
+      "can": {"id": 4, "bus": "rio"},
       "offset": 0.425049
     },
     "location": {

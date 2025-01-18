@@ -35,21 +35,21 @@ public class Drivetrain extends SubsystemBase {
    * @param initialRotation2d The initial rotation reported by an external gyro, e.g. NavX
    */
   public Drivetrain() {
-    var drivetrainConfig = ConfigReader.readConfig("DrivetrainConfigPrototypERR.json").getAsJsonObject();
-    var gyroSettings = drivetrainConfig.getAsJsonObject("externalGyro");
+    var drivetrainConfig = new ConfigReader("DrivetrainConfigPrototypERR.json");
     // The "type" must be "Pigeon2". Maybe extend this logic to use any devices. Maybe in the future
-    var pigeonCAN = gyroSettings.getAsJsonPrimitive("can").getAsInt();
-    gyro = new Pigeon2(pigeonCAN, "Cancun");
+    var pigeonCAN = drivetrainConfig.getAsInt("externalGyro/can/id");
+    var pigeonBus = drivetrainConfig.getAsString("externalGyro/can/bus");
+    gyro = new Pigeon2(pigeonCAN, pigeonBus);
 
-    var swerveModulesConfig = drivetrainConfig.getAsJsonArray("swerveModules");
-    nModules = swerveModulesConfig.size();
+    var swerveConfigArray = drivetrainConfig.getAsJsonArray("swerveModules");
+    nModules = swerveConfigArray.size();
     currentPositions = new SwerveModulePosition[nModules];
     swerveModules = new SwerveModule[nModules];
     var swerveLocations = new Translation2d[nModules];
 
     for (int i=0; i < nModules; i++) {
-      var configObject = swerveModulesConfig.get(i).getAsJsonObject();
-      var oneModule = new SwerveModule(configObject);
+      var swerveConfigReader = new ConfigReader(swerveConfigArray.get(i).getAsJsonObject());
+      var oneModule = new SwerveModule(swerveConfigReader);
       swerveModules[i] = oneModule;
       swerveLocations[i] = oneModule.mountPoint;
       currentPositions[i] = oneModule.getPosition();
