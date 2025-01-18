@@ -7,12 +7,14 @@ package frc.robot;
 import com.ctre.phoenix6.configs.ClosedLoopGeneralConfigs;
 import com.ctre.phoenix6.configs.FeedbackConfigs;
 import com.ctre.phoenix6.configs.MotionMagicConfigs;
+import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.MotionMagicDutyCycle;
 import com.ctre.phoenix6.controls.VelocityDutyCycle;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.InvertedValue;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -22,8 +24,8 @@ import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.util.sendable.SendableBuilder;
 
 public class SwerveModule implements Sendable {
-  private static final double kMaxSteerAcceleration = 6;  // Rotations per sec per sec
-  private static final double kMaxSteerVelocity = 3;      // Rotations per second
+  private static final double kMaxSteerAcceleration = 30;  // Rotations per sec per sec
+  private static final double kMaxSteerVelocity = 18;      // Rotations per second
 
   private final TalonFX steerMotor; // the steering motor
   private final TalonFX driveMotor; // the driving motor
@@ -59,6 +61,9 @@ public class SwerveModule implements Sendable {
     wrapConfig.ContinuousWrap = true;
 
     steerSettings = new TalonFXConfiguration()
+      .withMotorOutput(new MotorOutputConfigs()
+        .withInverted(InvertedValue.Clockwise_Positive)
+      )
       .withFeedback(new FeedbackConfigs()
         .withSensorToMechanismRatio(swerveConfig.getAsDouble("steer/gearing")))
       .withClosedLoopGeneral(wrapConfig)
@@ -118,6 +123,7 @@ public class SwerveModule implements Sendable {
     builder.addDoubleProperty("Mileage", this::getDrivePosition, null);
     builder.addDoubleProperty("Speed", this::getDriveVelocity, null);
     builder.addDoubleProperty("Azimuth", this::getSteerDegrees, null);
+    builder.addDoubleProperty("AbsDegrees", this::getAbsDegrees, null);
   }
 
   /**
@@ -144,6 +150,14 @@ public class SwerveModule implements Sendable {
 
   public double getSteerDegrees() {
     return getSteerRotation2d().getDegrees();
+  }
+
+  public Rotation2d getAbsRotation2d() {
+    return Rotation2d.fromRotations(absEncoder.getAbsolutePosition().getValueAsDouble());
+  }
+
+  public double getAbsDegrees() {
+    return getAbsRotation2d().getDegrees();
   }
 
   public double getDrivePosition() {
