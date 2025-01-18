@@ -10,7 +10,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.PS5Controller;
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Robot extends TimedRobot {
   private final PS5Controller operController = new PS5Controller(0);
@@ -22,7 +21,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void robotInit() {
-    SmartDashboard.putData(chassis);
+
   }
 
   @Override

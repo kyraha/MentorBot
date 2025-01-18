@@ -88,9 +88,9 @@ public class SwerveModule implements Sendable {
         .withKA(driveConfig.getAsJsonPrimitive("kA").getAsDouble())
       );
 
-    steerMotor = new TalonFX(steerConfig.getAsJsonPrimitive("can").getAsInt());
-    driveMotor = new TalonFX(driveConfig.getAsJsonPrimitive("can").getAsInt());
-    absEncoder = new CANcoder(encoderConfig.getAsJsonPrimitive("can").getAsInt());
+    steerMotor = new TalonFX(steerConfig.getAsJsonPrimitive("can").getAsInt(), "rio");
+    driveMotor = new TalonFX(driveConfig.getAsJsonPrimitive("can").getAsInt(), "rio");
+    absEncoder = new CANcoder(encoderConfig.getAsJsonPrimitive("can").getAsInt(), "rio");
 
     steerMotor.getConfigurator().apply(steerSettings);
     driveMotor.getConfigurator().apply(driveSettings);

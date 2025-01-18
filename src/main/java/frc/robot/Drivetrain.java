@@ -12,6 +12,8 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import edu.wpi.first.util.sendable.SendableBuilder;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 /** Represents a swerve drive style drivetrain. */
@@ -37,7 +39,7 @@ public class Drivetrain extends SubsystemBase {
     var gyroSettings = drivetrainConfig.getAsJsonObject("externalGyro");
     // The "type" must be "Pigeon2". Maybe extend this logic to use any devices. Maybe in the future
     var pigeonCAN = gyroSettings.getAsJsonPrimitive("can").getAsInt();
-    gyro = new Pigeon2(pigeonCAN);
+    gyro = new Pigeon2(pigeonCAN, "Cancun");
 
     var swerveModulesConfig = drivetrainConfig.getAsJsonArray("swerveModules");
     nModules = swerveModulesConfig.size();
@@ -52,11 +54,29 @@ public class Drivetrain extends SubsystemBase {
       swerveLocations[i] = oneModule.mountPoint;
       currentPositions[i] = oneModule.getPosition();
       addChild(oneModule.getName(), oneModule);
+      SmartDashboard.putData(oneModule);
     }
     kinematics = new SwerveDriveKinematics(swerveLocations);
 
     // odometry wrapper class that has functionality for cameras that report position with latency
     odometry = new SwerveDrivePoseEstimator(kinematics, gyro.getRotation2d(), currentPositions, new Pose2d());
+    SmartDashboard.putData(this);
+  }
+
+  /**
+   * Builds the sendable for Network Tables
+   * @param builder sendable builder
+   */
+  @Override
+  public void initSendable(SendableBuilder builder) {
+    builder.setSmartDashboardType("Swerve Module");
+    builder.addStringProperty("Name", this::getName, null);
+    builder.addDoubleProperty("Rotation", this::getAzimuth, null);
+  }
+
+  public double getAzimuth()
+  {
+    return odometry.getEstimatedPosition().getRotation().getDegrees();
   }
 
   /**
