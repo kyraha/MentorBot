@@ -8,35 +8,29 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.PS5Controller;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
-import frc.robot.sensors.NavX;
+import edu.wpi.first.wpilibj.TimedRobot;
 
 public class Robot extends TimedRobot {
   private final PS5Controller operController = new PS5Controller(0);
-  private final Drivetrain chassis = new Drivetrain(NavX.getRotation2d());
+  private final Drivetrain chassis = new Drivetrain();
 
   // Slew rate limiters to make joystick inputs more gentle; 1/3 sec from 0 to 1.
-  private final SkidLimiter skidLimiter = new SkidLimiter(2.5);
+  private final SkidLimiter skidLimiter = new SkidLimiter(2.5, 2, new Translation2d());
   private final SlewRateLimiter rotLimiter = new SlewRateLimiter(13);
 
   @Override
   public void robotInit() {
-    ShuffleboardTab tab = Shuffleboard.getTab("Subsystems");
-    tab.add(chassis);
+
   }
 
   @Override
   public void autonomousInit() {
-    NavX.reset();
   }
 
   @Override
   public void autonomousPeriodic() {
     driveWithJoystick(false);
-    chassis.updateOdometry(NavX.getRotation2d());
   }
 
   @Override
@@ -45,6 +39,9 @@ public class Robot extends TimedRobot {
   }
 
   private void driveWithJoystick(boolean fieldRelative) {
+    // Every drive cycle update odometry and get the best field pose estimate
+    final var pose = chassis.updateOdometry();
+
     // Get the x speed. We are inverting this because Xbox controllers return
     // negative values when we push forward.
     final var xSpeed = -MathUtil.applyDeadband(operController.getLeftY(), 0.04);
@@ -64,7 +61,7 @@ public class Robot extends TimedRobot {
     final var spin = rotLimiter.calculate(wSpeed) * Drivetrain.kMaxAngularSpeed;
 
     final ChassisSpeeds speeds = fieldRelative
-      ? ChassisSpeeds.fromFieldRelativeSpeeds(move.getX(), move.getY(), spin, NavX.getRotation2d())
+      ? ChassisSpeeds.fromFieldRelativeSpeeds(move.getX(), move.getY(), spin, pose.getRotation())
       : new ChassisSpeeds(move.getX(), move.getY(), spin);
     chassis.drive(speeds, getPeriod());
   }

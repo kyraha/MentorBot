@@ -5,12 +5,11 @@
 package frc.robot.sensors;
 
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.SPI;
-import com.kauailabs.navx.frc.AHRS;
+import com.studica.frc.AHRS;
 
 /** Add your docs here. */
 public class NavX {
-    private static AHRS chip = new AHRS(SPI.Port.kMXP);
+    private static AHRS chip = new AHRS(AHRS.NavXComType.kMXP_SPI);
 
     public static void reset(){
         chip.reset();
