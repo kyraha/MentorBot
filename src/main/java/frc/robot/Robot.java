@@ -4,16 +4,15 @@
 
 package frc.robot;
 
-import edu.wpi.first.wpilibj.PS5Controller;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.Drivetrain.DriveStick;
+import frc.robot.Drivetrain.StickDriver;
 import frc.robot.Drivetrain.SwerveChassis;
 
 public class Robot extends TimedRobot {
-    private final PS5Controller operController = new PS5Controller(0);
     private final SwerveChassis chassis = new SwerveChassis();
-    private final DriveStick driver = new DriveStick(chassis);
+    private final StickDriver driver = new StickDriver(chassis);
+    private OI oi;
 
     /**
      * This driverStationConnected() is a softer initialization than robotInit()
@@ -22,6 +21,7 @@ public class Robot extends TimedRobot {
     @Override
     public void driverStationConnected() {
         // Whatever was in robotInit() before
+        oi = new OI(chassis);
     }
 
     @Override
@@ -36,7 +36,7 @@ public class Robot extends TimedRobot {
 
     @Override
     public void teleopPeriodic() {
-        driver.drive(operController, getPeriod());
+        driver.drive(oi.mainController, getPeriod());
     }
 
     /**
