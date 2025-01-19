@@ -1,10 +1,9 @@
-package frc.robot;
+package frc.robot.Drivetrain;
 
 // Copyright (c) FIRST and 3130 the ERRORS.
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-import edu.wpi.first.math.MathSharedStore;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 
@@ -28,7 +27,6 @@ public class SkidLimiter {
     private double radialRateLimit;
 
     private Translation2d storedState;
-    private double storedTime;
 
     /**
      * Creates a new SlewRateLimiter with the given positive and negative rate limits and initial
@@ -45,7 +43,6 @@ public class SkidLimiter {
         this.angularRateLimit = angularRateLimit;
         this.radialRateLimit = radialRateLimit;
         this.storedState = initialValue;
-        this.storedTime = MathSharedStore.getTimestamp();
     }
 
     /**
@@ -58,29 +55,13 @@ public class SkidLimiter {
     }
 
     /**
-     * Filters the input to limit its slew rate.
-     *
-     * @param input The input value whose slew rate is to be limited.
-     * @return The filtered value, which will not change faster than the slew rate.
-     */
-    public Translation2d calculate(Translation2d input) {
-        double currentTime = MathSharedStore.getTimestamp();
-        double elapsedTime = currentTime - storedTime;
-        storedTime = currentTime;
-
-        storedState = calculateDry(input, elapsedTime);
-        return storedState;
-    }
-
-    /**
-     * Stateless (dry) calculations of the allowed new state using the given elapsed time.
-     * Does not mutate the Limiter object, i.e. no changes to previous states
+     * Calculates the allowed new state using the given elapsed time.
      *  
      * @param input The new desired two-dimentional vector (translation)
      * @param elapsedTime The time interval elapsed from the previous (current) state and new input
      * @return The new, allowed translation vector
      */
-    public Translation2d calculateDry(Translation2d input, double elapsedTime) {
+    public Translation2d calculate(Translation2d input, double elapsedTime) {
         double angularChangeLimit = angularRateLimit * elapsedTime;
         double radialChangeLimit = radialRateLimit * elapsedTime;
         double tA = 1;
@@ -116,7 +97,8 @@ public class SkidLimiter {
         }
 
         final double t = Math.min(tR, tA);
-        return storedState.interpolate(input, t);
+        storedState = storedState.interpolate(input, t);
+        return storedState;
     }
 
     /**
@@ -126,7 +108,6 @@ public class SkidLimiter {
      */
     public void reset(Translation2d value) {
         storedState = value;
-        storedTime = MathSharedStore.getTimestamp();
     }
 
     public double getAngularRateLimit() { return angularRateLimit; }
