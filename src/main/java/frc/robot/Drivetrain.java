@@ -4,8 +4,6 @@
 
 package frc.robot;
 
-import com.ctre.phoenix6.hardware.Pigeon2;
-
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -15,6 +13,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.sensors.IMU;
 
 /** Represents a swerve drive style drivetrain. */
 public class Drivetrain extends SubsystemBase {
@@ -26,7 +25,7 @@ public class Drivetrain extends SubsystemBase {
   private final SwerveDriveKinematics kinematics;
   private final SwerveDrivePoseEstimator odometry;
   private final SwerveModulePosition[] currentPositions;
-  private final Pigeon2 gyro;
+  private final IMU gyro;
 
   /**
    * Swerve drivetrain, configurable by a JSON Config file that has to be present in the 'deploy' directory
@@ -36,10 +35,7 @@ public class Drivetrain extends SubsystemBase {
    */
   public Drivetrain() {
     var drivetrainConfig = new ConfigReader("DrivetrainConfigPrototypERR.json");
-    // The "type" must be "Pigeon2". Maybe extend this logic to use any devices. Maybe in the future
-    var pigeonCAN = drivetrainConfig.getAsInt("externalGyro/can/id");
-    var pigeonBus = drivetrainConfig.getAsString("externalGyro/can/bus");
-    gyro = new Pigeon2(pigeonCAN, pigeonBus);
+    gyro = new IMU(drivetrainConfig.getAsSubReader("externalGyro"));
 
     var swerveConfigArray = drivetrainConfig.getAsJsonArray("swerveModules");
     nModules = swerveConfigArray.size();

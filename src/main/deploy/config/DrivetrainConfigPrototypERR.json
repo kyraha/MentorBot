@@ -1,4 +1,9 @@
 {
+"robotPhysics": {
+  "maxAcceleration": 2,
+  "maxSpeed": 3,
+  "maxTurnRate": 3.14
+},
 "externalGyro": {
   "type": "Pigeon2",
   "can": {"id": 1, "bus": "Cancun"}
