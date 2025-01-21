@@ -3,7 +3,6 @@ package frc.robot;
 import edu.wpi.first.wpilibj.PS5Controller;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.POVButton;
-import frc.robot.Drivetrain.SwerveChassis;
 
 public class OI {
     // Gamepad POV List
@@ -45,19 +44,19 @@ public class OI {
 
     public final PS5Controller mainController;
 
-    public OI(SwerveChassis chassis) {
+    public OI(Robot robot) {
         mainController = new PS5Controller(0);
 
         new POVButton(mainController, POV_N).onTrue(
             new InstantCommand(() -> {
-                chassis.activateFieldOriented();
-            }, chassis)
+                robot.chassis.activateFieldOriented();
+            }, robot.chassis)
         );
 
         new POVButton(mainController, POV_S).onTrue(
             new InstantCommand(() -> {
-                chassis.deactivateFieldOriented();
-            }, chassis)
+                robot.chassis.deactivateFieldOriented();
+            }, robot.chassis)
         );
     }
 }

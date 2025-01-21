@@ -33,7 +33,7 @@ public class StickDriver {
         final var wSpeed = -MathUtil.applyDeadband(operController.getRightX(), 0.04);
 
         final var move = skidLimiter.calculate(new Translation2d(xSpeed, ySpeed), periodSeconds);
-        final var spin = rotLimiter.calculate(wSpeed) * SwerveChassis.kMaxAngularSpeed;
+        final var spin = rotLimiter.calculate(wSpeed);
 
         chassis.driveSpeedPercents(move, spin, periodSeconds);
       }

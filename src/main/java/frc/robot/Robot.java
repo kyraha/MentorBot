@@ -10,9 +10,19 @@ import frc.robot.Drivetrain.StickDriver;
 import frc.robot.Drivetrain.SwerveChassis;
 
 public class Robot extends TimedRobot {
-    private final SwerveChassis chassis = new SwerveChassis();
-    private final StickDriver driver = new StickDriver(chassis);
-    private OI oi;
+    // Available configurations:
+    // DrivetrainConfigPrototypERR.json
+    // DrivetrainConfigShowstoperr.json
+    private static final String drivetrainConfigName = "DrivetrainConfigPrototypERR.json";
+
+    public SwerveChassis chassis;
+    public OI oi;
+    private final StickDriver driver;
+
+    public Robot() {
+        chassis = new SwerveChassis(drivetrainConfigName);
+        driver = new StickDriver(chassis);
+    }
 
     /**
      * This driverStationConnected() is a softer initialization than robotInit()
@@ -21,7 +31,7 @@ public class Robot extends TimedRobot {
     @Override
     public void driverStationConnected() {
         // Whatever was in robotInit() before
-        oi = new OI(chassis);
+        oi = new OI(this);
     }
 
     @Override

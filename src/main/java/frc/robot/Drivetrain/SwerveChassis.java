@@ -32,15 +32,12 @@ public class SwerveChassis extends SubsystemBase {
 
     /**
      * Swerve drivetrain, configurable by a JSON Config file that has to be present
-     * in the 'deploy' directory
-     * * DrivetrainConfigPrototypERR.json
-     * * DrivetrainConfigShowstoperr.json
+     * in the 'deploy/config' directory
      * 
-     * @param initialRotation2d The initial rotation reported by an external gyro,
-     *                          e.g. NavX
+     * @param configName The config file name. The file must be a json file
      */
-    public SwerveChassis() {
-        var drivetrainConfig = new ConfigReader("DrivetrainConfigPrototypERR.json");
+    public SwerveChassis(String configName) {
+        var drivetrainConfig = new ConfigReader(configName);
         gyro = new IMU(drivetrainConfig.getAsSubReader("externalGyro"));
 
         var swerveConfigArray = drivetrainConfig.getAsJsonArray("swerveModules");
