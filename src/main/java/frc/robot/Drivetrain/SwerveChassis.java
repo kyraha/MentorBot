@@ -19,8 +19,8 @@ import frc.robot.sensors.IMU;
 
 /** Represents a swerve drive style drivetrain. */
 public class SwerveChassis extends SubsystemBase {
-    public static final double kMaxSpeed = 3.0; // 3 meters per second
-    public static final double kMaxAngularSpeed = Math.PI; // 1/2 rotation per second
+    public static final double kMaxSpeed = 4.0; // 3 meters per second
+    public static final double kMaxAngularSpeed = 3.0*Math.PI; // 1/2 rotation per second
 
     private final int nModules;
     private final SwerveModule[] swerveModules;
