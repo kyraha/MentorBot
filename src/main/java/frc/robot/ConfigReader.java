@@ -35,11 +35,11 @@ public class ConfigReader {
     }
   }
 
-  public ConfigReader (String configName) {
+  public ConfigReader(String configName) {
     root = readConfig(configName).getAsJsonObject();
   }
 
-  public ConfigReader (JsonObject newRoot) {
+  public ConfigReader(JsonObject newRoot) {
     root = newRoot;
   }
 
@@ -47,7 +47,19 @@ public class ConfigReader {
     return root;
   }
 
-  public JsonArray getAsJsonArray (String path) {
+  public ConfigReader getAsSubReader(String path) {
+    String nodes[] = path.split("/");
+    String leaf = nodes[nodes.length-1];
+    JsonObject pointer = root;
+
+    // Iterate through all but one. The last one is the primitive we want
+    for (int i=0; i+1 < nodes.length; i++) {
+      pointer = pointer.getAsJsonObject(nodes[i]);
+    }
+    return new ConfigReader(pointer.getAsJsonObject(leaf));
+  }
+
+  public JsonArray getAsJsonArray(String path) {
     String nodes[] = path.split("/");
     String leaf = nodes[nodes.length-1];
     JsonObject pointer = root;
@@ -59,7 +71,7 @@ public class ConfigReader {
     return pointer.getAsJsonArray(leaf);
   }
 
-  public JsonPrimitive getAsJsonPrimitive (String path) {
+  public JsonPrimitive getAsJsonPrimitive(String path) {
     String nodes[] = path.split("/");
     String leaf = nodes[nodes.length-1];
     JsonObject pointer = root;
@@ -71,15 +83,15 @@ public class ConfigReader {
     return pointer.getAsJsonPrimitive(leaf);
   }
 
-  public double getAsDouble (String path) {
+  public double getAsDouble(String path) {
     return getAsJsonPrimitive(path).getAsDouble();
   }
 
-  public String getAsString (String path) {
+  public String getAsString(String path) {
     return getAsJsonPrimitive(path).getAsString();
   }
 
-  public int getAsInt (String path) {
+  public int getAsInt(String path) {
     return getAsJsonPrimitive(path).getAsInt();
   }
 }

@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
+import frc.robot.Drivetrain.SwerveModule;
+
 /** Add your docs here. */
 public class TestConfigs {
     private static String configName = "DrivetrainConfigPrototypERR.json";
