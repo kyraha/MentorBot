@@ -44,6 +44,6 @@ public class IMU {
     public Rotation2d getRotation2d() {
         if (pigeon != null) return pigeon.getRotation2d();
         if (navX != null) return navX.getRotation2d();
-        return new Rotation2d();
+        return Rotation2d.kZero;
     }
 }

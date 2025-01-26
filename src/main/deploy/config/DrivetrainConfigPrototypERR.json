@@ -1,8 +1,9 @@
 {
 "robotPhysics": {
   "maxAcceleration": 2,
-  "maxSpeed": 3,
-  "maxTurnRate": 3.14
+  "maxSpeed": 4,
+  "maxTurnRate": 10,
+  "maxTurnAcceleration": 2.5
 },
 "externalGyro": {
   "type": "Pigeon2",
