@@ -26,11 +26,12 @@ import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj.PS5Controller;
 
 public class StickDriver {
+    public static final Mass robotMass = Kilogram.of(65);
+    public static final MomentOfInertia robotInertia = new ImmutableMomentOfInertia(robotMass.in(Kilogram)*0.5*0.5/2.0, 1, KilogramSquareMeters);
+
     private SwerveChassis chassis;
     private final LinearAcceleration maxAcceleration;
     private final AngularAcceleration maxSpinAcceleration;
-    private final Mass robotMass;
-    private final MomentOfInertia robotInertia;
     private final Power availablPower;
 
     // Slew rate limiters to make joystick inputs more gentle; 1/3 sec from 0 to 1.
@@ -41,14 +42,14 @@ public class StickDriver {
         chassis = drivetrainToUse;
         maxAcceleration = MetersPerSecondPerSecond.of(chassis.kMaxAcceleration);
         maxSpinAcceleration = RadiansPerSecondPerSecond.of(chassis.kMaxAngularAcceleration);
-        robotMass = Kilogram.of(65);
-        robotInertia = new ImmutableMomentOfInertia(robotMass.in(Kilogram)*0.5*0.5/2.0, 1, KilogramSquareMeters);
-        //robotMass.times(Meters.of(0.5).times(Meters.of(0.5)));
         availablPower = Watts.of(3000);
+        skidLimiter = new SkidLimiter(maxSpinAcceleration.magnitude(), maxAcceleration.magnitude(), Translation2d.kZero);
+        initialize();
+    }
 
+    public void initialize() {
         // The following initialization would be done in Initialize() if it was a Command
         ghostSpeeds = new ChassisSpeeds(); // Assume starting with Sticks in neutral
-        skidLimiter = new SkidLimiter(maxSpinAcceleration.magnitude(), maxAcceleration.magnitude(), Translation2d.kZero);
     }
 
     public void drive(PS5Controller operController, double periodSeconds) {
@@ -109,40 +110,49 @@ public class StickDriver {
         var absNewVelocity = MetersPerSecond.of(newVelocityMetersPerSecond.getNorm());
         var absOldVelocity = MetersPerSecond.of(oldVelocityMetersPerSecond.getNorm());
         var linearEnergy = linearAccelerationEnergy(absNewVelocity, absOldVelocity);
+        if (linearEnergy.magnitude() < 0) linearEnergy = Joules.of(0);
 
         var newAngularVelocity = RadiansPerSecond.of(askedSpeeds.omegaRadiansPerSecond);
         var oldAngularVelocity = RadiansPerSecond.of(ghostSpeeds.omegaRadiansPerSecond);
         var angularEnergy = angularAccelerationEnergy(newAngularVelocity, oldAngularVelocity);
+        if (angularEnergy.magnitude() < 0) angularEnergy = Joules.of(0);
 
         var totalEnergyAsked = linearEnergy.plus(angularEnergy);
         var totalEnergyAvailable = availablPower.times(dT);
         var energyScaler = totalEnergyAvailable.div(totalEnergyAsked);
 
         if (energyScaler.magnitude() < 1.0) {
-            // Only clamp if the scaler is below 1.0, do not stretch
+            // Only clamp if the scaler is below 1.0, do not stretch energy if not asked
             linearEnergy = linearEnergy.times(energyScaler);
             angularEnergy = angularEnergy.times(energyScaler);
+            var scaledVelocityMetersPerSecond = newVelocityMetersPerSecond;
+            var scaledVelocityRadiansPerSecond = newAngularVelocity;
 
-            var linearCTerm = linearEnergy.times(2).div(robotMass).magnitude();
-            var linearVelocitySquared = absOldVelocity.magnitude() * absOldVelocity.magnitude();
-            var linearScaler = MetersPerSecond.of(Math.sqrt(linearVelocitySquared + linearCTerm)).div(absNewVelocity);
-            var scaledVelocityMetersPerSecond = newVelocityMetersPerSecond.times(linearScaler.magnitude());
+            if (absNewVelocity.magnitude() > 0 && linearEnergy.magnitude() > 0) {
+                var linearCTerm = linearEnergy.times(2).div(robotMass).magnitude();
+                var linearVelocitySquared = absOldVelocity.magnitude() * absOldVelocity.magnitude();
+                var linearScaler = MetersPerSecond.of(Math.sqrt(linearVelocitySquared + linearCTerm)).div(absNewVelocity);
+                scaledVelocityMetersPerSecond = newVelocityMetersPerSecond.times(linearScaler.magnitude());
+            }
 
-            var angularCTerm = angularEnergy.times(2).div(robotInertia).magnitude();
-            var angularVelocitySquared = oldAngularVelocity.magnitude() * oldAngularVelocity.magnitude();
-            var angularScaler = RadiansPerSecond.of(Math.sqrt(angularVelocitySquared + angularCTerm)).div(newAngularVelocity);
-            var scaledVelocityRadiansPerSecond = newAngularVelocity.times(angularScaler.magnitude());
+            if (newAngularVelocity.magnitude() > 0 && angularEnergy.magnitude() > 0) {
+                var angularCTerm = angularEnergy.times(2).div(robotInertia).magnitude();
+                var angularVelocitySquared = oldAngularVelocity.magnitude() * oldAngularVelocity.magnitude();
+                scaledVelocityRadiansPerSecond = RadiansPerSecond.of(Math.sqrt(angularVelocitySquared + angularCTerm));
+            }
 
-            askedSpeeds = new ChassisSpeeds(
+            return new ChassisSpeeds(
                 scaledVelocityMetersPerSecond.getX(),
                 scaledVelocityMetersPerSecond.getY(),
                 scaledVelocityRadiansPerSecond.magnitude());
         }
-
-        return askedSpeeds;
+        else {
+            // Otherwise the energy is not saturated, we are good
+            return askedSpeeds;
+        }
     }
 
-    Energy linearAccelerationEnergy(LinearVelocity vNew, LinearVelocity vOld) {
+    public static Energy linearAccelerationEnergy(LinearVelocity vNew, LinearVelocity vOld) {
         // delta Energy = mass * acceleration * distance
         // acceleration = delta_V / delta_T
         // distance = avg_V * delta_T
@@ -153,7 +163,7 @@ public class StickDriver {
         return Joules.of(deltaE.magnitude());
     }
 
-    Energy angularAccelerationEnergy(AngularVelocity wNew, AngularVelocity wOld) {
+    public static Energy angularAccelerationEnergy(AngularVelocity wNew, AngularVelocity wOld) {
         // Same math as for linear acceleration energy but angular
         // Therefore, delta Energy = mass * delta_omega * avg_omega
         var deltaW = wNew.minus(wOld);
