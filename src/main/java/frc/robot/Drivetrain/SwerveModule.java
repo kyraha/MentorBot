@@ -58,16 +58,14 @@ public class SwerveModule implements Sendable {
     moduleName = swerveConfig.getAsString("name");
     double wheelRadius = swerveConfig.getAsDouble("wheelRadius"); // in meters
     absEncoderOffsetRotations = swerveConfig.getAsDouble("encoder/offset"); // in rotations
-    var wrapConfig = new ClosedLoopGeneralConfigs();
-    wrapConfig.ContinuousWrap = true;
 
     steerSettings = new TalonFXConfiguration()
       .withMotorOutput(new MotorOutputConfigs()
-        .withInverted(InvertedValue.Clockwise_Positive)
-      )
+        .withInverted(InvertedValue.Clockwise_Positive))
       .withFeedback(new FeedbackConfigs()
         .withSensorToMechanismRatio(swerveConfig.getAsDouble("steer/gearing")))
-      .withClosedLoopGeneral(wrapConfig)
+      .withClosedLoopGeneral(new ClosedLoopGeneralConfigs()
+        .withContinuousWrap(true))
       .withSlot0(new Slot0Configs()
         .withKP(swerveConfig.getAsDouble("steer/kP"))
         .withKI(swerveConfig.getAsDouble("steer/kI"))

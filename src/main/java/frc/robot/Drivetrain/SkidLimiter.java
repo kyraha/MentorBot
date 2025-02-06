@@ -51,7 +51,7 @@ public class SkidLimiter {
      * @param angularRateLimit The arch change per second limit.
      */
     public SkidLimiter(double angularRateLimit) {
-        this(angularRateLimit, 0, new Translation2d());
+        this(angularRateLimit, 0, Translation2d.kZero);
     }
 
     /**

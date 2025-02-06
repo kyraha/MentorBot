@@ -23,8 +23,8 @@ public class TestConfigs {
             assertTrue(moduleName.length() > 5, "Name must be longer than 5");
             var oneModule = new SwerveModule(moduleConf);
             assertEquals(moduleName, oneModule.getName(), "Module name should get assigned");
-            System.out.println("Steer '" + moduleName + "': " + oneModule.getSteerSettings());
-            System.out.println("Drive '" + moduleName + "': " + oneModule.getDriveSettings());
+            // System.out.println("Steer '" + moduleName + "': " + oneModule.getSteerSettings());
+            // System.out.println("Drive '" + moduleName + "': " + oneModule.getDriveSettings());
         }
     }
 

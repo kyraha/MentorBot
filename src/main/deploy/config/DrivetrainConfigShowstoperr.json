@@ -1,20 +1,29 @@
 {
+"robotPhysics": {
+  "maxAcceleration": 2,
+  "maxSpeed": 5,
+  "maxTurnRate": 10,
+  "maxTurnAcceleration": 2.5
+},
+"externalGyro": {
+  "type": "NavX"
+},
 "swerveModules": [
   {
     "name": "One FR",
     "wheelRadius": 0.0508,
     "steer": {
-      "can": 2,
+      "can": {"id": 2, "bus": "rio"},
       "gearing": 21.42857,
-      "kP": 0.7,
+      "kP": 10.7,
       "kI": 0,
-      "kD": 0.005,
+      "kD": 0.1,
       "kS": 0,
       "kV": 0,
       "kA": 0
     },
     "drive": {
-      "can": 3,
+      "can": {"id": 3, "bus": "rio"},
       "gearing": 6.12,
       "kP": 0.1,
       "kI": 0,
@@ -24,7 +33,7 @@
       "kA": 0
     },
     "encoder": {
-      "can": 10,
+      "can": {"id": 10, "bus": "rio"},
       "offset": -0.454546517470453
     },
     "location": {
@@ -37,17 +46,17 @@
     "name": "Two BR",
     "wheelRadius": 0.0508,
     "steer": {
-      "can": 4,
+      "can": {"id": 4, "bus": "rio"},
       "gearing": 21.42857,
-      "kP": 0.7,
+      "kP": 10.7,
       "kI": 0,
-      "kD": 0.005,
+      "kD": 0.1,
       "kS": 0,
       "kV": 0,
       "kA": 0
     },
     "drive": {
-      "can": 5,
+      "can": {"id": 5, "bus": "rio"},
       "gearing": 6.12,
       "kP": 0.1,
       "kI": 0,
@@ -57,7 +66,7 @@
       "kA": 0
     },
     "encoder": {
-      "can": 11,
+      "can": {"id": 11, "bus": "rio"},
       "offset": 0.335928338384064
     },
     "location": {
@@ -70,17 +79,17 @@
     "name": "Three BL",
     "wheelRadius": 0.0508,
     "steer": {
-      "can": 6,
+      "can": {"id": 6, "bus": "rio"},
       "gearing": 21.42857,
-      "kP": 0.7,
+      "kP": 10.7,
       "kI": 0,
-      "kD": 0.005,
+      "kD": 0.1,
       "kS": 0,
       "kV": 0,
       "kA": 0
     },
     "drive": {
-      "can": 7,
+      "can": {"id": 7, "bus": "rio"},
       "gearing": 6.12,
       "kP": 0.1,
       "kI": 0,
@@ -90,7 +99,7 @@
       "kA": 0
     },
     "encoder": {
-      "can": 12,
+      "can": {"id": 12, "bus": "rio"},
       "offset": 0.284171150890579
     },
     "location": {
@@ -103,17 +112,17 @@
     "name": "Four FL",
     "wheelRadius": 0.0508,
     "steer": {
-      "can": 8,
+      "can": {"id": 8, "bus": "rio"},
       "gearing": 21.42857,
-      "kP": 0.7,
+      "kP": 10.7,
       "kI": 0,
-      "kD": 0.005,
+      "kD": 0.1,
       "kS": 0,
       "kV": 0,
       "kA": 0
     },
     "drive": {
-      "can": 9,
+      "can": {"id": 9, "bus": "rio"},
       "gearing": 6.12,
       "kP": 0.1,
       "kI": 0,
@@ -123,7 +132,7 @@
       "kA": 0
     },
     "encoder": {
-      "can": 13,
+      "can": {"id": 13, "bus": "rio"},
       "offset": 0.0893543597000828
     },
     "location": {
