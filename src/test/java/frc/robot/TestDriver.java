@@ -27,6 +27,7 @@ public class TestDriver {
         LinearVelocity v1 = MetersPerSecond.of(v1mps);
         var laccEnergy = StickDriver.linearAccelerationEnergy(v1, v0);
         assertEquals(expectedLAccE, laccEnergy.in(Joules), 0.1);
+        System.out.println("Linear E=" + laccEnergy);
     }
 
     @Test
@@ -41,6 +42,7 @@ public class TestDriver {
         AngularVelocity w1 = RadiansPerSecond.of(w1rps);
         var aaccEnergy = StickDriver.angularAccelerationEnergy(w1, w0);
         assertEquals(expectedLAccE, aaccEnergy.in(Joules), 0.1);
+        System.out.println("Angular E=" + aaccEnergy);
     }
 
 }

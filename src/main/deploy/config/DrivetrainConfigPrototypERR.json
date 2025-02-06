@@ -7,7 +7,7 @@
 },
 "externalGyro": {
   "type": "Pigeon2",
-  "can": {"id": 1, "bus": "Cancun"}
+  "can": {"id": 23, "bus": "rio"}
 },
 "swerveModules": [
   {
