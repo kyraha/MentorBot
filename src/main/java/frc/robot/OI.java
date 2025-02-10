@@ -1,6 +1,6 @@
 package frc.robot;
 
-import edu.wpi.first.wpilibj.PS5Controller;
+import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.POVButton;
 
@@ -42,10 +42,10 @@ public class OI {
         public static final int BTN_RJOYSTICK_PRESS = 10;
     }
 
-    public final PS5Controller mainController;
+    public final GenericHID mainController;
 
     public OI(Robot robot) {
-        mainController = new PS5Controller(0);
+        mainController = new GenericHID(0);
 
         new POVButton(mainController, POV_N).onTrue(
             new InstantCommand(() -> {

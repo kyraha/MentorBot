@@ -23,7 +23,7 @@ import edu.wpi.first.units.measure.Mass;
 import edu.wpi.first.units.measure.MomentOfInertia;
 import edu.wpi.first.units.measure.Power;
 import edu.wpi.first.units.measure.Time;
-import edu.wpi.first.wpilibj.PS5Controller;
+import edu.wpi.first.wpilibj.GenericHID;
 
 public class StickDriver {
     public static final Mass robotMass = Kilogram.of(65);
@@ -52,23 +52,23 @@ public class StickDriver {
         ghostSpeeds = new ChassisSpeeds(); // Assume starting with Sticks in neutral
     }
 
-    public void drive(PS5Controller operController, double periodSeconds) {
+    public void drive(GenericHID operController, double periodSeconds) {
         Time dT = Seconds.of(periodSeconds);
 
         // Get the x speed. We are inverting this because game controllers return
         // negative values when we push forward. Also forward is controller's Y
-        final var xStick = -MathUtil.applyDeadband(operController.getLeftY(), 0.04);
+        final var xStick = -MathUtil.applyDeadband(operController.getRawAxis(1), 0.04);
 
         // Get the y speed or sideways/strafe speed. We are inverting this because
         // we want a positive value when we pull to the left. Game controllers
         // return positive values when you pull to the right on X axis
-        final var yStick = -MathUtil.applyDeadband(operController.getLeftX(), 0.04);
+        final var yStick = -MathUtil.applyDeadband(operController.getRawAxis(0), 0.04);
 
         // Get the rate of angular rotation. We are inverting this because we want a
         // positive value when we pull to the left (remember, CCW is positive in
         // mathematics). Game controllers return positive values when you pull to
         // the right on their X axis
-        final var wStick = -MathUtil.applyDeadband(operController.getRightX(), 0.04);
+        final var wStick = -MathUtil.applyDeadband(operController.getRawAxis(2), 0.04);
 
         LinearVelocity vx = MetersPerSecond.of(xStick * chassis.kMaxSpeed);
         LinearVelocity vy = MetersPerSecond.of(yStick * chassis.kMaxSpeed);

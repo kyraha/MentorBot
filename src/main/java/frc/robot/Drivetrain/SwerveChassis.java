@@ -35,6 +35,10 @@ public class SwerveChassis extends SubsystemBase {
     private final IMU gyro;
     public boolean fieldRelative = false;
 
+    // Maybe temporary, random dashboard data
+    public double velocity = 0;
+
+
     /**
      * Swerve drivetrain, configurable by a JSON Config file that has to be present
      * in the 'deploy/config' directory
@@ -80,9 +84,22 @@ public class SwerveChassis extends SubsystemBase {
      */
     @Override
     public void initSendable(SendableBuilder builder) {
-        builder.setSmartDashboardType("Swerve Module");
-        builder.addStringProperty("Name", this::getName, null);
-        builder.addDoubleProperty("Yaw deg", this::getYaw, null);
+        builder.setSmartDashboardType("SwerveDrive");
+
+        builder.addDoubleProperty("Front Left Angle", () -> swerveModules[0].getSteerDegrees(), null);
+        builder.addDoubleProperty("Front Left Velocity", () -> swerveModules[0].getDriveVelocity(), null);
+
+        builder.addDoubleProperty("Front Right Angle", () -> swerveModules[1].getSteerDegrees(), null);
+        builder.addDoubleProperty("Front Right Velocity", () -> swerveModules[1].getDriveVelocity(), null);
+
+        builder.addDoubleProperty("Back Left Angle", () -> swerveModules[2].getSteerDegrees(), null);
+        builder.addDoubleProperty("Back Left Velocity", () -> swerveModules[2].getDriveVelocity(), null);
+
+        builder.addDoubleProperty("Back Right Angle", () -> swerveModules[3].getSteerDegrees(), null);
+        builder.addDoubleProperty("Back Right Velocity", () -> swerveModules[3].getDriveVelocity(), null);
+
+        builder.addDoubleProperty("Robot Angle", this::getYaw, null);
+        builder.addDoubleProperty("Velocity", () -> velocity, null);
     }
 
     public double getYaw() {
@@ -100,6 +117,8 @@ public class SwerveChassis extends SubsystemBase {
     public void driveVelocities(ChassisSpeeds speeds, Time dT) {
         // Every drive cycle update odometry and get the best field pose estimate
         final var pose = updateOdometry();
+
+        velocity = speeds.vxMetersPerSecond + speeds.vyMetersPerSecond;
 
         if (fieldRelative) {
             // Robot always drives robot oriented. If we want to drive field relative we have to convert
