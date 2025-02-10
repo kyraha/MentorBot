@@ -5,7 +5,9 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.Drivetrain.FakeDriving;
 import frc.robot.Drivetrain.StickDriver;
 import frc.robot.Drivetrain.SwerveChassis;
 
@@ -18,10 +20,12 @@ public class Robot extends TimedRobot {
     public SwerveChassis chassis;
     public OI oi;
     private final StickDriver driver;
+    private final Command autonomousCommand;
 
     public Robot() {
         chassis = new SwerveChassis(drivetrainConfigName);
         driver = new StickDriver(chassis);
+        autonomousCommand = new FakeDriving(chassis);
     }
 
     /**
@@ -37,6 +41,7 @@ public class Robot extends TimedRobot {
     @Override
     public void autonomousInit() {
         // Initialize autonomous command(s)
+        autonomousCommand.schedule();
     }
 
     @Override
@@ -56,6 +61,7 @@ public class Robot extends TimedRobot {
     */
     @Override
     public void robotPeriodic() {
+        chassis.updateOdometry();
         // Runs the Scheduler.  This is responsible for polling buttons, adding newly-scheduled
         // commands, running already-scheduled commands, removing finished or interrupted commands,
         // and running subsystem periodic() methods.

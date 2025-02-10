@@ -15,6 +15,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.util.sendable.SendableBuilder;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.ConfigReader;
@@ -33,6 +34,7 @@ public class SwerveChassis extends SubsystemBase {
     private final SwerveDrivePoseEstimator odometry;
     private final SwerveModulePosition[] currentPositions;
     private final IMU gyro;
+    private final Field2d field = new Field2d();
     public boolean fieldRelative = false;
 
     // Maybe temporary, random dashboard data
@@ -75,6 +77,7 @@ public class SwerveChassis extends SubsystemBase {
         // Reset it when the real pose becomes known, e.g. from vision or autonomous dead reconing
         odometry = new SwerveDrivePoseEstimator(kinematics, gyro.getRotation2d(), currentPositions, Pose2d.kZero);
         SmartDashboard.putData(this);
+        SmartDashboard.putData("Field", field);
     }
 
     /**
@@ -102,6 +105,11 @@ public class SwerveChassis extends SubsystemBase {
         builder.addDoubleProperty("Velocity", () -> velocity, null);
     }
 
+    /**
+     * Get the current yaw of the robot
+     * 
+     * @return The yaw of the robot in degrees
+     */
     public double getYaw() {
         return odometry.getEstimatedPosition().getRotation().getDegrees();
     }
@@ -116,7 +124,7 @@ public class SwerveChassis extends SubsystemBase {
      */
     public void driveVelocities(ChassisSpeeds speeds, Time dT) {
         // Every drive cycle update odometry and get the best field pose estimate
-        final var pose = updateOdometry();
+        final var pose = odometry.getEstimatedPosition();
 
         velocity = speeds.vxMetersPerSecond + speeds.vyMetersPerSecond;
 
@@ -149,12 +157,23 @@ public class SwerveChassis extends SubsystemBase {
         driveVelocities(scaledSpeeds, Seconds.of(periodSeconds));
     }
 
-    /** Updates the field relative position of the robot. */
-    public Pose2d updateOdometry() {
+    private void updatePositions() {
         for (int i = 0; i < nModules; i++) {
             currentPositions[i] = swerveModules[i].getPosition();
         }
-        return odometry.update(gyro.getRotation2d(), currentPositions);
+    }
+
+    /** Updates the field relative position of the robot. */
+    public Pose2d updateOdometry() {
+        updatePositions();
+        var pose = odometry.update(gyro.getRotation2d(), currentPositions);
+        field.setRobotPose(pose);
+        return pose;
+    }
+
+    public void resetOdometry(Pose2d pose) {
+        updatePositions();
+        odometry.resetPosition(gyro.getRotation2d(), currentPositions, pose);
     }
 
     public void activateFieldOriented() {
