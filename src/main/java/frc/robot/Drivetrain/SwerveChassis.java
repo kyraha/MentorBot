@@ -80,6 +80,10 @@ public class SwerveChassis extends SubsystemBase {
         SmartDashboard.putData("Field", field);
     }
 
+    public SwerveDrivePoseEstimator getOdometry() {
+        return odometry;
+    }
+
     /**
      * Builds the sendable for Network Tables
      * 
