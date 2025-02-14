@@ -5,6 +5,8 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.Drivetrain.StickDriver;
 import frc.robot.Drivetrain.SwerveChassis;
@@ -20,11 +22,13 @@ public class Robot extends TimedRobot {
     public OI oi;
     public Camera camera;
     private final StickDriver driver;
+    private final Field2d field = new Field2d();
 
     public Robot() {
         chassis = new SwerveChassis(drivetrainConfigName);
         driver = new StickDriver(chassis);
         camera = new Camera("2025-ERRshop-field.json");
+        SmartDashboard.putData("Field", field);
     }
 
     /**
@@ -60,7 +64,7 @@ public class Robot extends TimedRobot {
     @Override
     public void robotPeriodic() {
         // Periodically updates the main pose estimator from the wheels position
-        chassis.updateOdometry();
+        field.setRobotPose(chassis.updateOdometry());
 
         // Periodically updates odometry with vision from the Camera
         camera.addVisionMeasurement(chassis.getOdometry());
