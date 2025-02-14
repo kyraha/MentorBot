@@ -73,6 +73,10 @@ public class SwerveChassis extends SubsystemBase {
         SmartDashboard.putData(this);
     }
 
+    public SwerveDrivePoseEstimator getOdometry() {
+        return odometry;
+    }
+
     /**
      * Builds the sendable for Network Tables
      * 
@@ -99,7 +103,7 @@ public class SwerveChassis extends SubsystemBase {
      */
     public void driveVelocities(ChassisSpeeds speeds, Time dT) {
         // Every drive cycle update odometry and get the best field pose estimate
-        final var pose = updateOdometry();
+        final var pose = odometry.getEstimatedPosition();
 
         if (fieldRelative) {
             // Robot always drives robot oriented. If we want to drive field relative we have to convert
