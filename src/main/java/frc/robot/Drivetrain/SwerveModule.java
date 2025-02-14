@@ -34,9 +34,9 @@ public class SwerveModule implements Sendable {
   private final TalonFX driveMotor; // the driving motor
   private final CANcoder absEncoder; // the can encoder attached to the steering shaft
 
-  private final TalonFXConfiguration steerSettings;
-  private final TalonFXConfiguration driveSettings;
-  private final CANcoderConfiguration cancoderSettings;
+  private final TalonFXConfiguration steerConfig;
+  private final TalonFXConfiguration driveConfig;
+  private final CANcoderConfiguration cancoderConfig;
 
   private final double absEncoderOffsetRotations;
   private final String moduleName; // to tell modules apart, e.g. in the Network Tables
@@ -57,58 +57,58 @@ public class SwerveModule implements Sendable {
    * location - translation of the module from the robot's origin.
    * encoder/offset - the CANcoder reading in radians when it's at physical zero
    */
-  public SwerveModule(ConfigReader swerveConfig) {
-    moduleName = swerveConfig.getAsString("name");
-    double wheelRadius = swerveConfig.getAsDouble("wheelRadius"); // in meters
-    absEncoderOffsetRotations = swerveConfig.getAsDouble("encoder/offset"); // in rotations
+  public SwerveModule(ConfigReader swerveJSON) {
+    moduleName = swerveJSON.getAsString("name");
+    double wheelRadius = swerveJSON.getAsDouble("wheelRadius"); // in meters
+    absEncoderOffsetRotations = swerveJSON.getAsDouble("encoder/offset"); // in rotations
 
-    steerSettings = new TalonFXConfiguration()
+    steerConfig = new TalonFXConfiguration()
       .withMotorOutput(new MotorOutputConfigs()
         .withInverted(InvertedValue.Clockwise_Positive))
       .withFeedback(new FeedbackConfigs()
-        .withSensorToMechanismRatio(swerveConfig.getAsDouble("steer/gearing")))
+        .withSensorToMechanismRatio(swerveJSON.getAsDouble("steer/gearing")))
       .withClosedLoopGeneral(new ClosedLoopGeneralConfigs()
         .withContinuousWrap(true))
       .withSlot0(new Slot0Configs()
-        .withKP(swerveConfig.getAsDouble("steer/kP"))
-        .withKI(swerveConfig.getAsDouble("steer/kI"))
-        .withKD(swerveConfig.getAsDouble("steer/kD"))
-        .withKS(swerveConfig.getAsDouble("steer/kS"))
-        .withKV(swerveConfig.getAsDouble("steer/kV"))
-        .withKA(swerveConfig.getAsDouble("steer/kA"))
+        .withKP(swerveJSON.getAsDouble("steer/kP"))
+        .withKI(swerveJSON.getAsDouble("steer/kI"))
+        .withKD(swerveJSON.getAsDouble("steer/kD"))
+        .withKS(swerveJSON.getAsDouble("steer/kS"))
+        .withKV(swerveJSON.getAsDouble("steer/kV"))
+        .withKA(swerveJSON.getAsDouble("steer/kA"))
       )
       .withMotionMagic(new MotionMagicConfigs()
         .withMotionMagicAcceleration(kMaxSteerAcceleration)
         .withMotionMagicCruiseVelocity(kMaxSteerVelocity)
       );
 
-    driveSettings = new TalonFXConfiguration()
+    driveConfig = new TalonFXConfiguration()
       .withFeedback(new FeedbackConfigs()
-        .withSensorToMechanismRatio(swerveConfig.getAsDouble("drive/gearing") / (2.0 * Math.PI * wheelRadius)))
+        .withSensorToMechanismRatio(swerveJSON.getAsDouble("drive/gearing") / (2.0 * Math.PI * wheelRadius)))
       .withSlot0(new Slot0Configs()
-        .withKP(swerveConfig.getAsDouble("drive/kP"))
-        .withKI(swerveConfig.getAsDouble("drive/kI"))
-        .withKD(swerveConfig.getAsDouble("drive/kD"))
-        .withKS(swerveConfig.getAsDouble("drive/kS"))
-        .withKV(swerveConfig.getAsDouble("drive/kV"))
-        .withKA(swerveConfig.getAsDouble("drive/kA"))
+        .withKP(swerveJSON.getAsDouble("drive/kP"))
+        .withKI(swerveJSON.getAsDouble("drive/kI"))
+        .withKD(swerveJSON.getAsDouble("drive/kD"))
+        .withKS(swerveJSON.getAsDouble("drive/kS"))
+        .withKV(swerveJSON.getAsDouble("drive/kV"))
+        .withKA(swerveJSON.getAsDouble("drive/kA"))
       );
 
-    cancoderSettings = new CANcoderConfiguration()
+    cancoderConfig = new CANcoderConfiguration()
       .withMagnetSensor(new MagnetSensorConfigs()
         .withMagnetOffset(0));
 
-    steerMotor = new TalonFX(swerveConfig.getAsInt("steer/can/id"), swerveConfig.getAsString("steer/can/bus"));
-    driveMotor = new TalonFX(swerveConfig.getAsInt("drive/can/id"), swerveConfig.getAsString("drive/can/bus"));
-    absEncoder = new CANcoder(swerveConfig.getAsInt("encoder/can/id"), swerveConfig.getAsString("encoder/can/bus"));
+    steerMotor = new TalonFX(swerveJSON.getAsInt("steer/can/id"), swerveJSON.getAsString("steer/can/bus"));
+    driveMotor = new TalonFX(swerveJSON.getAsInt("drive/can/id"), swerveJSON.getAsString("drive/can/bus"));
+    absEncoder = new CANcoder(swerveJSON.getAsInt("encoder/can/id"), swerveJSON.getAsString("encoder/can/bus"));
 
-    steerMotor.getConfigurator().apply(steerSettings);
-    driveMotor.getConfigurator().apply(driveSettings);
-    absEncoder.getConfigurator().apply(cancoderSettings);
+    steerMotor.getConfigurator().apply(steerConfig);
+    driveMotor.getConfigurator().apply(driveConfig);
+    absEncoder.getConfigurator().apply(cancoderConfig);
 
     mountPoint = new Translation2d(
-      swerveConfig.getAsDouble("location/x"),
-      swerveConfig.getAsDouble("location/y"));
+      swerveJSON.getAsDouble("location/x"),
+      swerveJSON.getAsDouble("location/y"));
 
     // Set the current reading of the steering angle from the abs encoder once and forever
     steerMotor.setPosition(absEncoder.getAbsolutePosition().getValueAsDouble() - absEncoderOffsetRotations);
@@ -179,12 +179,12 @@ public class SwerveModule implements Sendable {
     return moduleName;
   }
 
-  public TalonFXConfiguration getSteerSettings() {
-    return steerSettings;
+  public TalonFXConfiguration getSteerConfig() {
+    return steerConfig;
   }
 
-  public TalonFXConfiguration getDriveSettings() {
-    return driveSettings;
+  public TalonFXConfiguration getDriveConfig() {
+    return driveConfig;
   }
 
 
