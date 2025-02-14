@@ -6,7 +6,7 @@
   "maxTurnAcceleration": 2.5
 },
 "externalGyro": {
-  "type": "Pigeon2",
+  "type": "navx",
   "can": {"id": 23, "bus": "rio"}
 },
 "swerveModules": [

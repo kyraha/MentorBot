@@ -4,8 +4,10 @@
 
 package frc.robot.Drivetrain;
 
+import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.ClosedLoopGeneralConfigs;
 import com.ctre.phoenix6.configs.FeedbackConfigs;
+import com.ctre.phoenix6.configs.MagnetSensorConfigs;
 import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
@@ -34,6 +36,7 @@ public class SwerveModule implements Sendable {
 
   private final TalonFXConfiguration steerSettings;
   private final TalonFXConfiguration driveSettings;
+  private final CANcoderConfiguration cancoderSettings;
 
   private final double absEncoderOffsetRotations;
   private final String moduleName; // to tell modules apart, e.g. in the Network Tables
@@ -91,12 +94,17 @@ public class SwerveModule implements Sendable {
         .withKA(swerveConfig.getAsDouble("drive/kA"))
       );
 
+    cancoderSettings = new CANcoderConfiguration()
+      .withMagnetSensor(new MagnetSensorConfigs()
+        .withMagnetOffset(0));
+
     steerMotor = new TalonFX(swerveConfig.getAsInt("steer/can/id"), swerveConfig.getAsString("steer/can/bus"));
     driveMotor = new TalonFX(swerveConfig.getAsInt("drive/can/id"), swerveConfig.getAsString("drive/can/bus"));
     absEncoder = new CANcoder(swerveConfig.getAsInt("encoder/can/id"), swerveConfig.getAsString("encoder/can/bus"));
 
     steerMotor.getConfigurator().apply(steerSettings);
     driveMotor.getConfigurator().apply(driveSettings);
+    absEncoder.getConfigurator().apply(cancoderSettings);
 
     mountPoint = new Translation2d(
       swerveConfig.getAsDouble("location/x"),
