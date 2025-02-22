@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.Drivetrain.FakeDriving;
 import frc.robot.Drivetrain.StickDriver;
 import frc.robot.Drivetrain.SwerveChassis;
+import frc.robot.SlewDriving.PelicanDrive;
 import frc.robot.sensors.Camera;
 
 public class Robot extends TimedRobot {
@@ -43,6 +44,7 @@ public class Robot extends TimedRobot {
     public void driverStationConnected() {
         // Whatever was in robotInit() before
         oi = new OI(this);
+        chassis.setDefaultCommand(new PelicanDrive(chassis, oi.mainController, getPeriod()));
     }
 
     @Override
@@ -58,7 +60,7 @@ public class Robot extends TimedRobot {
 
     @Override
     public void teleopPeriodic() {
-        driver.drive(oi.mainController, getPeriod());
+        // driver.drive(oi.mainController, getPeriod());
     }
 
     /**
