@@ -5,12 +5,11 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.Drivetrain.FakeDriving;
-import frc.robot.Drivetrain.StickDriver;
 import frc.robot.Drivetrain.SwerveChassis;
 import frc.robot.SlewDriving.PelicanDrive;
 import frc.robot.sensors.Camera;
@@ -24,13 +23,13 @@ public class Robot extends TimedRobot {
     public SwerveChassis chassis;
     public OI oi;
     public Camera camera;
-    private final StickDriver driver;
+    // private final StickDriver driver;
     private final Command autonomousCommand;
     private final Field2d field = new Field2d();
 
     public Robot() {
         chassis = new SwerveChassis(drivetrainConfigName);
-        driver = new StickDriver(chassis);
+        // driver = new StickDriver(chassis);
         autonomousCommand = new FakeDriving(chassis);
         camera = new Camera("2025-ERRshop-field.json");
         SmartDashboard.putData("Field", field);

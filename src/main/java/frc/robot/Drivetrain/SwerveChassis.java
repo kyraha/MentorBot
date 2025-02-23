@@ -6,6 +6,8 @@ package frc.robot.Drivetrain;
 
 import static edu.wpi.first.units.Units.Seconds;
 
+import com.ctre.phoenix6.swerve.SwerveRequest;
+
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -159,6 +161,20 @@ public class SwerveChassis extends SubsystemBase {
             spinPercent * kMaxAngularSpeed);
 
         driveVelocities(scaledSpeeds, Seconds.of(periodSeconds));
+    }
+
+    /**
+     * Method to drive the robot with CTRE's SwerveRequest
+     *
+     * @param swerveRequest Speeds of the robot in the x, y directions and rotation
+     */
+    public void applyRequest(SwerveRequest.FieldCentric swerveRequest, Time dT) {
+        var speeds = new ChassisSpeeds(
+            swerveRequest.VelocityX,
+            swerveRequest.VelocityY,
+            swerveRequest.RotationalRate
+        );
+        driveVelocities(speeds, dT);
     }
 
     private void updatePositions() {
