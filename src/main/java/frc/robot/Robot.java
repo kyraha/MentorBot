@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -28,11 +30,12 @@ public class Robot extends TimedRobot {
     private final Field2d field = new Field2d();
 
     public Robot() {
-        chassis = new SwerveChassis(drivetrainConfigName);
+        chassis = new SwerveChassis(drivetrainConfigName, isReal());
         // driver = new StickDriver(chassis);
         autonomousCommand = new FakeDriving(chassis);
         camera = new Camera("2025-ERRshop-field.json");
         SmartDashboard.putData("Field", field);
+        chassis.resetOdometry(new Pose2d(2,2, Rotation2d.kZero));
     }
 
     /**

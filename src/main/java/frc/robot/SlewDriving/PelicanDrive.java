@@ -29,6 +29,7 @@ public class PelicanDrive extends Command {
     public PelicanDrive(SwerveChassis drivetrainToUse, GenericHID controller, double periodSeconds) {
         // Use addRequirements() here to declare subsystem dependencies.
         chassis = drivetrainToUse;
+        this.addRequirements(chassis);
         operController = controller;
         dT = Seconds.of(periodSeconds);
         driveRequest = new SwerveRequest.FieldCentric()

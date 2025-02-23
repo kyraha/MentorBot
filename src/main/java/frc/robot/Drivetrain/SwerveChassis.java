@@ -17,7 +17,6 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.util.sendable.SendableBuilder;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.ConfigReader;
@@ -36,8 +35,8 @@ public class SwerveChassis extends SubsystemBase {
     private final SwerveDrivePoseEstimator odometry;
     private final SwerveModulePosition[] currentPositions;
     private final IMU gyro;
-    private final Field2d field = new Field2d();
     public boolean fieldRelative = false;
+    public boolean isReal = false;
 
     // Maybe temporary, random dashboard data
     public double velocity = 0;
@@ -49,7 +48,8 @@ public class SwerveChassis extends SubsystemBase {
      * 
      * @param configName The config file name. The file must be a json file
      */
-    public SwerveChassis(String configName) {
+    public SwerveChassis(String configName, boolean isReal) {
+        this.isReal = isReal;
         var drivetrainConfig = new ConfigReader(configName);
         gyro = new IMU(drivetrainConfig.getAsSubReader("externalGyro"));
         kMaxSpeed = drivetrainConfig.getAsDouble("robotPhysics/maxSpeed");
@@ -79,7 +79,6 @@ public class SwerveChassis extends SubsystemBase {
         // Reset it when the real pose becomes known, e.g. from vision or autonomous dead reconing
         odometry = new SwerveDrivePoseEstimator(kinematics, gyro.getRotation2d(), currentPositions, Pose2d.kZero);
         SmartDashboard.putData(this);
-        SmartDashboard.putData("Field", field);
     }
 
     public SwerveDrivePoseEstimator getOdometry() {
@@ -187,7 +186,6 @@ public class SwerveChassis extends SubsystemBase {
     public Pose2d updateOdometry() {
         updatePositions();
         var pose = odometry.update(gyro.getRotation2d(), currentPositions);
-        field.setRobotPose(pose);
         return pose;
     }
 
