@@ -16,7 +16,7 @@ public class PelicanLimiter {
     private boolean isAngleReal = false;
     private final double skidMaxAccel = 9.8;
     public final VariableSlewRateLimiter driveLimiter = new VariableSlewRateLimiter(OI.ROBOT_MAX_ACCEL, OI.ROBOT_MAX_DECEL, 0);
-    public final VariableSlewRateLimiter thetaLimiter = new VariableSlewRateLimiter(0);
+    public final VariableSlewRateLimiter thetaLimiter = new VariableSlewRateLimiter(0).enableRotationalInput();
 
     /**
      * Check if the vector is virtually zero. This is purely mathematical deadband to avoid division by zero.
@@ -64,9 +64,9 @@ public class PelicanLimiter {
                     double mag = driveLimiter.calculate(vector.getNorm() * cosine);
                     // Define the limit for the angle based on the current speed
                     double limit = skidMaxAccel / mag;
-                    thetaLimiter.updateValues(limit, -limit);
+                    thetaLimiter.updateLimits(limit, -limit);
                     //calculate limits for rotation (with -pi to pi bounds)
-                    Rotation2d angle = new Rotation2d(thetaLimiter.calculate(vector.getAngle()));
+                    Rotation2d angle = thetaLimiter.calculate(vector.getAngle());
                     vector = new Translation2d(mag, angle);
                     return new ChassisSpeeds(vector.getX(), vector.getY(), rotation);
                 }

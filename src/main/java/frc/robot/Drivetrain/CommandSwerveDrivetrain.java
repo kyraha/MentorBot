@@ -8,9 +8,10 @@ import java.util.function.Supplier;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
+import com.ctre.phoenix6.swerve.SwerveModule;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
-
+import com.ctre.phoenix6.swerve.SwerveRequest.ForwardPerspectiveValue;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
@@ -54,6 +55,12 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private static final Rotation2d kRedAlliancePerspectiveRotation = Rotation2d.k180deg;
     /* Keep track if we've ever applied the operator perspective before or not */
     private boolean m_hasAppliedOperatorPerspective = false;
+
+    /* Swerve requests to apply during normal operations */
+    public final SwerveRequest.FieldCentric operatorDriveRequest = new SwerveRequest.FieldCentric()
+        .withDriveRequestType(SwerveModule.DriveRequestType.Velocity)
+        .withForwardPerspective(ForwardPerspectiveValue.OperatorPerspective);
+
 
     /* Swerve requests to apply during SysId characterization */
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
@@ -395,5 +402,20 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     }
     public ChassisSpeeds getRobotRelativeSpeeds() {
         return this.getKinematics().toChassisSpeeds(this.getState().ModuleStates);
+    }
+
+    /**
+     * Sets the control request from given operator oriented ChassisSpeeds.
+     * <p>
+     * This is a convenience method that allows you to set the control request
+     * without having to create a new SwerveRequest object each time.
+     *
+     * @param speeds The desired chassis speeds from operator perspective (positive vx is forward)
+     */
+    public void driveOperatorOriented(ChassisSpeeds speeds) {
+        setControl(operatorDriveRequest
+            .withVelocityX(speeds.vxMetersPerSecond)
+            .withVelocityY(speeds.vyMetersPerSecond)
+            .withRotationalRate(speeds.omegaRadiansPerSecond));
     }
 }

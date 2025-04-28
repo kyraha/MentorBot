@@ -1,9 +1,5 @@
 package frc.robot;
 
-import com.ctre.phoenix6.swerve.SwerveModule;
-import com.ctre.phoenix6.swerve.SwerveRequest;
-import com.ctre.phoenix6.swerve.SwerveRequest.ForwardPerspectiveValue;
-
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.PS5Controller;
@@ -62,30 +58,24 @@ public class OI {
 
     }
 
-    public final SwerveRequest.FieldCentric mainDriveRequest = new SwerveRequest
-        .FieldCentric()
-        .withDriveRequestType(SwerveModule.DriveRequestType.Velocity)
-        .withForwardPerspective(ForwardPerspectiveValue.OperatorPerspective);
-
     public ChassisSpeeds getSpeedsFromHID() {
-        // First and foremost, apply deadband to the joystick axes to remove noise
-        double xAxis = MathUtil.applyDeadband(-mainController.getLeftY(), 0.04);
-        double yAxis = MathUtil.applyDeadband(-mainController.getLeftX(), 0.04);
-        double rotation = MathUtil.applyDeadband(-mainController.getRightX(), 0.04);
+        if (mainController.isConnected()) {
+            // First and foremost, apply deadband to the joystick axes to remove noise
+            double xAxis = MathUtil.applyDeadband(-mainController.getLeftY(), 0.04);
+            double yAxis = MathUtil.applyDeadband(-mainController.getLeftX(), 0.04);
+            double rotation = MathUtil.applyDeadband(-mainController.getRightX(), 0.04);
 
-        // Second, square the inputs and then apply max speeds to get the real units
-        xAxis *= Math.abs(xAxis) * ROBOT_MAX_SPEED;
-        yAxis *= Math.abs(yAxis) * ROBOT_MAX_SPEED;
-        rotation *= Math.abs(rotation) * ROBOT_MAX_ANGULAR_SPEED;
+            // Second, square the inputs and then apply max speeds to get the real units
+            xAxis *= Math.abs(xAxis) * ROBOT_MAX_SPEED;
+            yAxis *= Math.abs(yAxis) * ROBOT_MAX_SPEED;
+            rotation *= Math.abs(rotation) * ROBOT_MAX_ANGULAR_SPEED;
 
-        // Then construct the speeds object and return it
-        return new ChassisSpeeds(xAxis, yAxis, rotation);
+            // Then construct the speeds object and return it
+            return new ChassisSpeeds(xAxis, yAxis, rotation);
+        }
+        else {
+            return new ChassisSpeeds();
+        }
     }
 
-    public SwerveRequest.FieldCentric getDriveRequest(ChassisSpeeds speeds) {
-        return mainDriveRequest
-            .withVelocityX(speeds.vxMetersPerSecond)
-            .withVelocityY(speeds.vyMetersPerSecond)
-            .withRotationalRate(speeds.omegaRadiansPerSecond);
-    }
 }
