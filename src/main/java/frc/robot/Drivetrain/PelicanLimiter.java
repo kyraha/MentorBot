@@ -14,7 +14,7 @@ public class PelicanLimiter {
     private static final double kAccelFactor = 12.0 * 40.0 / 70.0; // Watts available per kg of robot
 
     private boolean isAngleReal = false;
-    private final double thetaLimiterConstant = 10;
+    private final double skidMaxAccel = 9.8;
     public final VariableSlewRateLimiter driveLimiter = new VariableSlewRateLimiter(OI.ROBOT_MAX_ACCEL, OI.ROBOT_MAX_DECEL, 0);
     public final VariableSlewRateLimiter thetaLimiter = new VariableSlewRateLimiter(0);
 
@@ -63,7 +63,7 @@ public class PelicanLimiter {
                     // Throttle desired vector by angle turned before calculating new magnitude
                     double mag = driveLimiter.calculate(vector.getNorm() * cosine);
                     // Define the limit for the angle based on the current speed
-                    double limit = thetaLimiterConstant / mag;
+                    double limit = skidMaxAccel / mag;
                     thetaLimiter.updateValues(limit, -limit);
                     //calculate limits for rotation (with -pi to pi bounds)
                     Rotation2d angle = new Rotation2d(thetaLimiter.calculate(vector.getAngle()));
