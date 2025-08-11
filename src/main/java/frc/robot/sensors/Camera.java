@@ -3,11 +3,15 @@ package frc.robot.sensors;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.cscore.OpenCvLoader;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
@@ -16,13 +20,29 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.wpilibj.Filesystem;
 
 public class Camera {
-    public AprilTagFieldLayout aprilTagFieldLayout;
-    private PhotonCamera cam;
-    private Transform3d robotToCam;
+    private static final double[] homographyValues = {
+        -0.0001270542819333261,  0.0008182770377802222,  0.1862827299336119,
+         0.0006939972013693427,  0.0001741107045706584, -0.5076447771203513,
+         0.0006253018433804395, -0.0029524108712688280,  1.0};
+    public static final Mat homographyMatrix = new Mat(3, 3, CvType.CV_64F, Scalar.all(0));
+
+    //Cam mounted facing forward, half a meter forward of center, half a meter up from center.
+    public static Transform3d robotToCamera = new Transform3d(
+        new Translation3d(0.287, 0.275, 0.395),
+        new Rotation3d(3.0042,0.2186,-0.2814+0.0268-0.0642));
+
     PhotonPoseEstimator photonPoseEstimator;
+    private AprilTagFieldLayout aprilTagFieldLayout;
+    private PhotonCamera cam;
+
+    static {
+        // Initialize the homography matrix with predefined values
+        homographyMatrix.put(0, 0, homographyValues);
+    }
 
     public Camera(String customFieldName) {
         try {
+            OpenCvLoader.forceStaticLoad();
             Path pathToLayout = FileSystems.getDefault().getPath(
                 Filesystem.getDeployDirectory().toString(),
                 "fields",
@@ -37,10 +57,9 @@ public class Camera {
 
         //Forward Camera
         cam = new PhotonCamera("3130Camera");
-        robotToCam = new Transform3d(new Translation3d(0.3, 0.1, 0.2), new Rotation3d(0,0.26,0.087)); //Cam mounted facing forward, half a meter forward of center, half a meter up from center.
 
         // Construct PhotonPoseEstimator
-        photonPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PoseStrategy.CLOSEST_TO_REFERENCE_POSE, robotToCam);
+        photonPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PoseStrategy.CLOSEST_TO_REFERENCE_POSE, robotToCamera);
 
     }
 
