@@ -20,6 +20,12 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.wpilibj.Filesystem;
 
 public class Camera {
+    private static final double[] cameraIntrinsics = { // Theoretical, needs calibration
+        677.0, 0.0, 410.0, // fx, 0, cx
+        0.0, 677.0, 316.0, // 0, fy, cy
+        0.0, 0.0, 1.0
+    };
+    public static final Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F, Scalar.all(0));
     private static final double[] homographyValues = {
         -0.0001270542819333261,  0.0008182770377802222,  0.1862827299336119,
          0.0006939972013693427,  0.0001741107045706584, -0.5076447771203513,
@@ -38,6 +44,8 @@ public class Camera {
     static {
         // Initialize the homography matrix with predefined values
         homographyMatrix.put(0, 0, homographyValues);
+        // Initialize the camera matrix with theoretical values
+        cameraMatrix.put(0, 0, cameraIntrinsics);
     }
 
     public Camera(String customFieldName) {
