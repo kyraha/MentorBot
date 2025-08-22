@@ -63,6 +63,67 @@ public class TestHomography {
     }
 
     @Test
+    void testArtificialHomography() {
+        // MatOfPoint2f imagePoints = new MatOfPoint2f(new Point(571, 261.1)); //406,218));
+        // MatOfPoint2f worldPoints = new MatOfPoint2f();
+        // Mat iPoint3d = new Mat(3, 1, CvType.CV_64F, new Scalar(0));
+        // iPoint3d.put(0, 0, imagePoints.toList().get(0).x);
+        // iPoint3d.put(1, 0, imagePoints.toList().get(0).y);
+        // iPoint3d.put(2, 0, 1.0); // Homogeneous coordinate
+
+        // Mat cPoint3d = Camera.cameraMatrix.inv().matMul(iPoint3d);
+        // System.out.println("Camera Matrix Inverse Applied: " + cPoint3d.dump());
+
+        // Mat cPoint4d = new Mat(4, 1, CvType.CV_64F, new Scalar(0));
+        // cPoint4d.put(0, 0, cPoint3d.get(0, 0)[0]);
+        // cPoint4d.put(1, 0, cPoint3d.get(1, 0)[0]);
+        // cPoint4d.put(2, 0, cPoint3d.get(2, 0)[0]);
+        // cPoint4d.put(3, 0, 1.0); // Homogeneous coordinate
+
+        // // Transform to world coordinates
+        // Mat wPoint4d = wpi2Opencv.matMul(cPoint4d); //robot2Camera).matMul(world2Robot).matMul(cPoint4d);
+        // System.out.println("World Point camera rotated: " + wPoint4d.dump());
+        // wPoint4d = robot2Camera.matMul(wPoint4d);
+        // System.out.println("World Point robot to camera shifted: " + wPoint4d.dump());
+        // wPoint4d = world2Robot.matMul(wPoint4d);
+        // System.out.println("World Point shifted to robot corner: " + wPoint4d.dump());
+
+        // Same chain of transformations but with one matrix
+        Mat comboMat = world2Robot.matMul(robot2Camera).matMul(wpi2Opencv);
+        // Compare our "theoretical" projections to the actual measured points
+        assert image.rows() == world.rows() : "Image and world must have the same number of points";
+        for (int i=0; i < image.rows(); i++) {
+            Point wP2d = world.toList().get(i);
+            Point aP2d = image.toList().get(i);
+            Mat iPoint3d = new Mat(3, 1, CvType.CV_64F, new Scalar(0));
+            iPoint3d.put(0, 0, aP2d.x);
+            iPoint3d.put(1, 0, aP2d.y);
+            iPoint3d.put(2, 0, 1.0); // Homogeneous coordinate
+
+            Mat cPoint3d = Camera.cameraMatrix.inv().matMul(iPoint3d);
+
+            Mat cPoint4d = new Mat(4, 1, CvType.CV_64F, new Scalar(0));
+            cPoint4d.put(0, 0, cPoint3d.get(0, 0)[0]);
+            cPoint4d.put(1, 0, cPoint3d.get(1, 0)[0]);
+            cPoint4d.put(2, 0, cPoint3d.get(2, 0)[0]);
+            cPoint4d.put(3, 0, 1.0); // Homogeneous coordinate
+
+            Mat wPoint4d = comboMat.matMul(cPoint4d);
+            Point wP3d = new Point(wPoint4d.get(0, 0)[0], wPoint4d.get(1, 0)[0]);
+            System.out.println("    Actual Point: " + wP2d);
+            System.out.println("Calculated Point: " + wP3d + " Z: " + wPoint4d.get(2, 0)[0]);
+        }
+
+        // Test the artificial homography matrix
+        Mat artificialHomography = new Mat(3, 3, CvType.CV_64F);
+        artificialHomography.put(0, 0, 1.0, 0.0, 0.0,
+                                 0.0, 1.0, 0.0,
+                                 0.0, 0.0, 1.0);
+        // Core.perspectiveTransform(imagePoints, worldPoints, artificialHomography);
+        // System.out.println("Transformed Point with Artificial Homography: " + worldPoints.toList().get(0).toString());
+    }
+
+    @Test
     void testMats() {
         // Compare our "theoretical" projections to the actual measured points
         assert image.rows() == world.rows() : "Image and world must have the same number of points";
@@ -99,4 +160,5 @@ public class TestHomography {
             System.out.println(" Actual image point:" + aP2d.toString() + " Error: " + error);
         }
     }
+
 }
