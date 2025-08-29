@@ -54,6 +54,46 @@ public class TestHomography {
         // System.out.println("WPI to OpenCV Matrix:\n" + opencv2wpi.dump());
     }
 
+    String matToString(Mat m) {
+        StringBuilder sb = new StringBuilder();
+        if (m.empty()) {
+            return "[]";
+        }
+        else if (m.rows() == 1) {
+            sb.append("[");
+            for (int j = 0; j < m.cols(); j++) {
+                sb.append(String.format("% .4f", m.get(0, j)[0]));
+                if (j < m.cols() - 1) {
+                    sb.append(", ");
+                }
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+        else if (m.cols() == 1) {
+            sb.append("[");
+            for (int i = 0; i < m.rows(); i++) {
+                sb.append(String.format("% .4f", m.get(i, 0)[0]));
+                if (i < m.rows() - 1) {
+                    sb.append(", ");
+                }
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+        for (int i = 0; i < m.rows(); i++) {
+            sb.append("[");
+            for (int j = 0; j < m.cols(); j++) {
+                sb.append(String.format("% .4f", m.get(i, j)[0]));
+                if (j < m.cols() - 1) {
+                    sb.append(", ");
+                }
+            }
+            sb.append("]\n");
+        }
+        return sb.toString();
+    }
+
     @Test
     void testGeneralHomography() {
         MatOfPoint2f imagePoints = new MatOfPoint2f(new Point(400,240));
@@ -64,6 +104,8 @@ public class TestHomography {
 
     @Test
     void testArtificialHomography() {
+        Mat cameraInv = Camera.cameraMatrix.inv();
+        System.out.println("Camera Matrix Inverse:\n" + matToString(cameraInv));
         // MatOfPoint2f imagePoints = new MatOfPoint2f(new Point(571, 261.1)); //406,218));
         // MatOfPoint2f worldPoints = new MatOfPoint2f();
         // Mat iPoint3d = new Mat(3, 1, CvType.CV_64F, new Scalar(0));
@@ -90,6 +132,12 @@ public class TestHomography {
 
         // Same chain of transformations but with one matrix
         Mat comboMat = world2Robot.matMul(robot2Camera).matMul(wpi2Opencv);
+        System.out.println("Combo Matrix:\n" + matToString(comboMat));
+        Mat projectionMat = Mat.zeros(3, 3, CvType.CV_64F);
+        projectionMat.put(0, 0, comboMat.get(2, 3));
+        projectionMat.put(1, 1, comboMat.get(2, 3));
+        projectionMat.put(2, 2, 1);
+
         // Compare our "theoretical" projections to the actual measured points
         assert image.rows() == world.rows() : "Image and world must have the same number of points";
         for (int i=0; i < image.rows(); i++) {
@@ -100,7 +148,7 @@ public class TestHomography {
             iPoint3d.put(1, 0, aP2d.y);
             iPoint3d.put(2, 0, 1.0); // Homogeneous coordinate
 
-            Mat cPoint3d = Camera.cameraMatrix.inv().matMul(iPoint3d);
+            Mat cPoint3d = cameraInv.matMul(iPoint3d);
 
             Mat cPoint4d = new Mat(4, 1, CvType.CV_64F, new Scalar(0));
             cPoint4d.put(0, 0, cPoint3d.get(0, 0)[0]);
@@ -112,6 +160,7 @@ public class TestHomography {
             Point wP3d = new Point(wPoint4d.get(0, 0)[0], wPoint4d.get(1, 0)[0]);
             System.out.println("    Actual Point: " + wP2d);
             System.out.println("Calculated Point: " + wP3d + " Z: " + wPoint4d.get(2, 0)[0]);
+            System.out.println("Homo point: " + matToString(cPoint4d));
         }
 
         // Test the artificial homography matrix
