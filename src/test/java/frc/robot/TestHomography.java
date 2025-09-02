@@ -180,12 +180,14 @@ public class TestHomography {
             // Mat reduced = reduceHomo(wPoint4d);
 
             Mat homoShifted = camToWorldTranslation.matMul(homoInWorld4d);
+            System.out.println("Point " + i + " shifted: " + matToString(homoShifted));
             double z = homoInWorld4d.get(2, 0)[0];
             double scale = f / (f - z);
             Mat homoProjected = new Mat(4, 1, CvType.CV_64F);
             Core.multiply(homoShifted, new Scalar(scale), homoProjected);
+            System.out.println("Point " + i + " projected: " + matToString(homoProjected));
             Mat homoUnshifted = camToWorldTranslation.inv().matMul(homoProjected);
-            System.out.println("Point " + i + " projected: " + matToString(homoUnshifted));
+            System.out.println("Point " + i + " predicted: " + matToString(homoUnshifted));
             System.out.println("Scale: " + scale);
         }
 
