@@ -44,26 +44,16 @@ public class TestLinearRegression {
         double c = -1.0; // c is fixed to -1
         System.out.println(String.format("Plane equation: % .4fx + % .4fy + % .4fz + % .4f = 0", a, b, c, d));
 
-        // We want to invert the normal vector (-c) to point up along the z axis (0, 0, 1)
-        double roll = Math.atan2(-b, -c); // rolling the top to the right is positive (-y)
-        double pitch = Math.atan2(a, -c); // pitch is leaning forward positive (+x)
-        // But if the camera is upside down, then we start with pointing down
-        double uroll = Math.atan2(b, c); // rolling bottom to left is positive (+y)
-        // Pitch is the same either way because WPIlib's Rotation3d is extrinsic
-
-        // The camera rotates in the opposite direction than the plane
-        System.out.println(String.format("Camera Roll: %.4f, and Pitch: %.4f radians", roll, pitch));
-        System.out.println(String.format("Flipped Camera Roll: %.4f radians", uroll));
-
-        Vector<N3> initial = new Vector<N3>(Nat.N3());
-        initial.set(0, 0, 0);
-        initial.set(1, 0, 0);
-        initial.set(2, 0, -1);
-        Vector<N3> rotated = new Vector<N3>(Nat.N3());
-        rotated.set(0, 0, a);
-        rotated.set(1, 0, b);
-        rotated.set(2, 0, c);
-        Rotation3d rotation = new Rotation3d(initial, rotated);
-        System.out.println(String.format("Rotation: %f, %f, %f", rotation.getX(), rotation.getY(), rotation.getZ()));
+        Vector<N3> cameraNormal = new Vector<N3>(Nat.N3());
+        cameraNormal.set(0, 0, 0);
+        cameraNormal.set(1, 0, 0);
+        cameraNormal.set(2, 0, -1);
+        Vector<N3> planeNormal = new Vector<N3>(Nat.N3());
+        planeNormal.set(0, 0, a);
+        planeNormal.set(1, 0, b);
+        planeNormal.set(2, 0, c);
+        Rotation3d rotation = new Rotation3d(planeNormal, cameraNormal);
+        System.out.println(String.format("Roll: %f, Pitch: %f, Yaw: %f, Angle: %f", rotation.getX(), rotation.getY(), rotation.getZ(), rotation.getAngle()));
+        System.out.println(rotation.getQuaternion().toString());
     }
 }
