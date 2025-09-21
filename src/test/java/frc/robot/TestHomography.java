@@ -46,7 +46,7 @@ public class TestHomography {
         wpi2Opencv.put(0, 0, tWpi2Opencv.toMatrix().getData());
     }
 
-    String matToString(Mat m) {
+    public static String matToString(Mat m) {
         StringBuilder sb = new StringBuilder();
         if (m.empty()) {
             return "[]";
