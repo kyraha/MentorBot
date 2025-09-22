@@ -66,7 +66,7 @@ public class VariableSlewRateLimiter implements Sendable {
         this.negativeRateLimit = negativeRateLimit;
     }
 
-    public void setPositiveRateLimit(double positiveRateLimit) {
+    public void updatePositiveLimit(double positiveRateLimit) {
         this.positiveRateLimit = positiveRateLimit;
     }
 

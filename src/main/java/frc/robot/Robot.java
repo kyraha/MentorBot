@@ -19,7 +19,7 @@ public class Robot extends TimedRobot {
     public ElevatorSubsystem elevator;
     public OI oi;
     public Camera camera;
-    final Telemetry logger = new Telemetry(OI.ROBOT_MAX_SPEED);
+    final Telemetry logger = new Telemetry(OI.ROBOT_SPEED_LIMIT);
 
     // private final StickDriver driver;
     private final Command autonomousCommand;

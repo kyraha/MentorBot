@@ -7,12 +7,8 @@ import frc.robot.Elevator.ElevatorSubsystem;
 
 public class OI {
     // Robot wide constants
-    public static final double ROBOT_TALL_SPEED = 1.2; // m/s
-    public static final double ROBOT_MAX_SPEED = 3.0; // m/s
-    public static final double ROBOT_MAX_ACCEL = 8.0; // m/s^2
-    public static final double ROBOT_MAX_ANGULAR_SPEED = 3.0; // rad/s
-    public static final double ROBOT_MAX_ANGULAR_ACCEL = 6.0; // rad/s^2
-    public static final double ROBOT_MAX_DECEL = -10.0; // m/s^2
+    public static final double ROBOT_SPEED_LIMIT = 3.0; // m/s
+    public static final double ROBOT_SPIN_LIMIT = 3.0; // rad/s
 
     // Gamepad POV List
     public static final int POV_UNPRESSED = -1;
@@ -67,9 +63,9 @@ public class OI {
             double rotation = MathUtil.applyDeadband(-mainController.getRightX(), 0.04);
 
             // Second, square the inputs and then apply max speeds to get the real units
-            xAxis *= Math.abs(xAxis) * ROBOT_MAX_SPEED;
-            yAxis *= Math.abs(yAxis) * ROBOT_MAX_SPEED;
-            rotation *= Math.abs(rotation) * ROBOT_MAX_ANGULAR_SPEED;
+            xAxis *= Math.abs(xAxis) * ROBOT_SPEED_LIMIT;
+            yAxis *= Math.abs(yAxis) * ROBOT_SPEED_LIMIT;
+            rotation *= Math.abs(rotation) * ROBOT_SPIN_LIMIT;
 
             // Then construct the speeds object and return it
             return new ChassisSpeeds(xAxis, yAxis, rotation);

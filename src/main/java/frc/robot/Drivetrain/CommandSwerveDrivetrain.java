@@ -1,8 +1,8 @@
 package frc.robot.Drivetrain;
 
-import static edu.wpi.first.units.Units.*;
+import static edu.wpi.first.units.Units.Second;
+import static edu.wpi.first.units.Units.Volts;
 
-import java.io.IOException;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.SignalLogger;
@@ -16,17 +16,12 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-import com.pathplanner.lib.path.PathConstraints;
-import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
@@ -34,9 +29,8 @@ import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import frc.robot.Drivetrain.TunerConstants.TunerSwerveDrivetrain;
 
-import org.json.simple.parser.ParseException;
+import frc.robot.Drivetrain.TunerConstants.TunerSwerveDrivetrain;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
@@ -207,61 +201,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         }
     }
 
-    public Command produceTrajectory(String pathName) throws IOException, ParseException {
-        // Load the path we want to pathfind to and follow
-        PathPlannerPath path = PathPlannerPath.fromPathFile(pathName);
-
-        // Create the constraints to use while pathfinding. The constraints defined in the path will only be used for the path.
-        PathConstraints constraints = new PathConstraints(
-                1, 1,
-                Units.degreesToRadians(540), Units.degreesToRadians(720));
-
-        // Since AutoBuilder is configured, we can use it to build pathfinding commands
-        return AutoBuilder.pathfindThenFollowPath(
-                path,
-                constraints);
-    }
-
-    //targetPose must be the final desired pose of the robot in Pose2d
-    public Translation2d produceOneDimensionalTrajectory(Pose2d targetPose) {
-
-        double radius = 1;
-        Transform2d goLeft = new Transform2d(new Translation2d(radius, Rotation2d.kCCW_90deg), Rotation2d.kZero);
-        Translation2d OLeft = targetPose.plus(goLeft).getTranslation();
-        Transform2d goRight = new Transform2d(new Translation2d(radius, Rotation2d.kCW_90deg), Rotation2d.kZero);
-        Translation2d ORight = targetPose.plus(goRight).getTranslation();
-        Translation2d startingPose = getStatePose().getTranslation();
-        Translation2d chosenO;
-        boolean rotateClockwise;
-        if(startingPose.getDistance(OLeft) < startingPose.getDistance(ORight)) {
-            chosenO = OLeft;
-            rotateClockwise = true;
-        } else {
-            chosenO = ORight;
-            rotateClockwise = false;
-        }
-        Translation2d distance = chosenO.minus(startingPose);
-        if(distance.getNorm() >= radius) {
-            double theta = Math.asin(radius/distance.getNorm());
-            if(rotateClockwise) {
-                return new Translation2d(1, distance.getAngle().minus(new Rotation2d(theta)));
-            } else {
-                return new Translation2d(1, distance.getAngle().plus(new Rotation2d(theta)));
-            }
-        } else {
-            Translation2d radiusVector = targetPose.getTranslation().minus(chosenO);
-            double RdotD = (radiusVector.getX() * distance.getX()) + (radiusVector.getY() * distance.getY());
-            double denominator = 2 * (-(radius * radius) - RdotD);
-            double numerator = (radius * radius) - (distance.getNorm() * distance.getNorm());
-            Translation2d littleR = distance.plus(radiusVector.times(numerator/denominator));
-            if(rotateClockwise) {
-                return new Translation2d(1, littleR.getAngle().plus(Rotation2d.kCW_90deg));
-            } else {
-                return new Translation2d(1, littleR.getAngle().plus(Rotation2d.kCCW_90deg));
-            }
-        }
-    }
-
     /**
      * Constructs a CTRE SwerveDrivetrain using the specified constants.
      * <p>
@@ -395,13 +334,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         Matrix<N3, N1> visionMeasurementStdDevs
     ) {
         super.addVisionMeasurement(visionRobotPoseMeters, Utils.fpgaToCurrentTime(timestampSeconds), visionMeasurementStdDevs);
-    }
-
-    public Pose2d getStatePose() {
-        return this.getState().Pose;
-    }
-    public ChassisSpeeds getRobotRelativeSpeeds() {
-        return this.getKinematics().toChassisSpeeds(this.getState().ModuleStates);
     }
 
     /**

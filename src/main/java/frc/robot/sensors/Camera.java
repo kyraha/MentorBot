@@ -11,7 +11,6 @@ import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.cscore.OpenCvLoader;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
@@ -59,7 +58,6 @@ public class Camera {
 
     public Camera(String customFieldName) {
         try {
-            OpenCvLoader.forceStaticLoad();
             Path pathToLayout = FileSystems.getDefault().getPath(
                 Filesystem.getDeployDirectory().toString(),
                 "fields",
