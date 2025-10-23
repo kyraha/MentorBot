@@ -5,30 +5,31 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.Drivetrain.StickDriver;
-import frc.robot.Drivetrain.SwerveChassis;
+import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.Drivetrain.CommandSwerveDrivetrain;
+import frc.robot.Drivetrain.PelicanDriver;
+import frc.robot.Drivetrain.TunerConstants;
+import frc.robot.Elevator.ElevatorSubsystem;
 import frc.robot.sensors.Camera;
 
 public class Robot extends TimedRobot {
-    // Available configurations:
-    // DrivetrainConfigPrototypERR.json
-    // DrivetrainConfigShowstoperr.json
-    private static final String drivetrainConfigName = "DrivetrainConfigPrototypERR.json";
-
-    public SwerveChassis chassis;
+    public CommandSwerveDrivetrain chassis;
+    public ElevatorSubsystem elevator;
     public OI oi;
     public Camera camera;
-    private final StickDriver driver;
-    private final Field2d field = new Field2d();
+    final Telemetry logger = new Telemetry(OI.ROBOT_SPEED_LIMIT);
+
+    // private final StickDriver driver;
+    private final Command autonomousCommand;
 
     public Robot() {
-        chassis = new SwerveChassis(drivetrainConfigName);
-        driver = new StickDriver(chassis);
+        chassis = TunerConstants.createDrivetrain();
+        elevator = new ElevatorSubsystem();
+        autonomousCommand = Commands.none();
         camera = new Camera("2025-ERRshop-field.json");
-        SmartDashboard.putData("Field", field);
+        chassis.registerTelemetry(logger::telemeterize);
     }
 
     /**
@@ -39,11 +40,13 @@ public class Robot extends TimedRobot {
     public void driverStationConnected() {
         // Whatever was in robotInit() before
         oi = new OI(this);
+        chassis.setDefaultCommand(new PelicanDriver(chassis, oi));
     }
 
     @Override
     public void autonomousInit() {
         // Initialize autonomous command(s)
+        autonomousCommand.schedule();
     }
 
     @Override
@@ -53,7 +56,7 @@ public class Robot extends TimedRobot {
 
     @Override
     public void teleopPeriodic() {
-        driver.drive(oi.mainController, getPeriod());
+        // driver.drive(oi.mainController, getPeriod());
     }
 
     /**
@@ -63,11 +66,8 @@ public class Robot extends TimedRobot {
     */
     @Override
     public void robotPeriodic() {
-        // Periodically updates the main pose estimator from the wheels position
-        field.setRobotPose(chassis.updateOdometry());
-
         // Periodically updates odometry with vision from the Camera
-        camera.addVisionMeasurement(chassis.getOdometry());
+        //camera.addVisionMeasurement(chassis);
 
         // Runs the Scheduler.  This is responsible for polling buttons, adding newly-scheduled
         // commands, running already-scheduled commands, removing finished or interrupted commands,
