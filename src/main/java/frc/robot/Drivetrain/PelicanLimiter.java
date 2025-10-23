@@ -73,7 +73,7 @@ public class PelicanLimiter {
      * @param desiredSpeeds The desired speeds for the robot
      * @return The new speeds with acceleration limits
      */
-    public ChassisSpeeds accelLimitVectorDrive(ChassisSpeeds desiredSpeeds) {
+    public ChassisSpeeds calculate(ChassisSpeeds desiredSpeeds) {
         Translation2d vector = new Translation2d(desiredSpeeds.vxMetersPerSecond, desiredSpeeds.vyMetersPerSecond);
         double rotation = desiredSpeeds.omegaRadiansPerSecond;
         if(isAngleReal) {

@@ -24,7 +24,7 @@ public class PelicanDriver extends Command {
     public void execute() {
         ChassisSpeeds HIDSpeeds = operator.getSpeedsFromHID();
         // TBD: scale the speeds by the hight of the elevator
-        ChassisSpeeds limitedSpeeds = limiter.accelLimitVectorDrive(HIDSpeeds);
+        ChassisSpeeds limitedSpeeds = limiter.calculate(HIDSpeeds);
         chassis.driveOperatorOriented(limitedSpeeds);
     }
 
