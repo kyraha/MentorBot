@@ -2,6 +2,7 @@ package frc.robot.sensors;
 
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -9,6 +10,7 @@ import org.opencv.core.Scalar;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
+import org.photonvision.targeting.PhotonPipelineResult;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
@@ -79,7 +81,7 @@ public class Camera {
     }
 
     public void addVisionMeasurement(SwerveDrivePoseEstimator odometry) {
-        for (var oneResult : cam.getAllUnreadResults()) {
+        for (var oneResult : getResults()) {
             photonPoseEstimator.setReferencePose(odometry.getEstimatedPosition());
             var estiamtedOpt = photonPoseEstimator.update(oneResult);
             if (estiamtedOpt.isPresent()) {
@@ -88,6 +90,10 @@ public class Camera {
                 odometry.addVisionMeasurement(pose2d, estiamtedOpt.get().timestampSeconds);
             }
         }
+    }
+
+    public List<PhotonPipelineResult> getResults() {
+        return cam.getAllUnreadResults();
     }
 
 }
