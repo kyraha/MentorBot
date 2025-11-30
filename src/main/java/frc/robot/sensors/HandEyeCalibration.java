@@ -161,7 +161,7 @@ public  class HandEyeCalibration extends Command
         System.out.println(flatStringMat(odoR, "Odo Rotat"));
     }
 
-    String flatStringMat(Mat mat, String name) {
+    static public String flatStringMat(Mat mat, String name) {
         StringBuilder sb = new StringBuilder();
         int size = mat.rows() * mat.cols();
         double[] d_buffer = new double[size];
@@ -169,7 +169,7 @@ public  class HandEyeCalibration extends Command
         sb.append("{");
         int i = 0;
         for(double d : d_buffer) {
-            sb.append(d);
+            sb.append((float)d);
             if(i < size - 1) sb.append(", ");
             i++;
         }

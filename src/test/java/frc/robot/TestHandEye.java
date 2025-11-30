@@ -14,6 +14,8 @@ import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.numbers.N3;
 
+import frc.robot.sensors.HandEyeCalibration;
+
 public class TestHandEye {
     // Load OpenCV library before running tests
     static {
@@ -111,11 +113,11 @@ public class TestHandEye {
      * We assume the target's position in the world is fixed and known (bTt).
      * 
      * To simulate the vision measurements (cTt) the relationship is defined as:
-     * cTt = gTc^-1 * bTg^-1 * bTt
+     * \[ cTt = gTc^{-1} * bTg^{-1} * bTt \]
      * where:
      * - gTc is the robot-to-camera transform (fixed, predefined for this test, but what we
      *   want to find in general)
-     * - bTg is the robot movement (odometry)
+     * - bTg is the robot movement (odometry measurement)
      * - bTt is the world-to-target transform (fixed, predefined for this test)
      * 
      * Naming of the matrices comes from the OpenCV: Calib3d documentation:
@@ -128,6 +130,8 @@ public class TestHandEye {
      */
     @Test
     void testHandEyeModeled() {
+        // Choose calibration method
+        int calib_method = Calib3d.CALIB_HAND_EYE_HORAUD;
         // Random number generator for simulating noise
         Random random = new Random();
         // Noise levels to simulate real-world inaccuracies
@@ -139,8 +143,10 @@ public class TestHandEye {
         // In real life, these would be unknown and what we want to find
         Mat r_robot2cam = Mat.eye(3, 3, CvType.CV_64F); // Eye in opencv-ese is I - identity matrix
         Mat t_robot2cam = Mat.zeros(3, 1, CvType.CV_64F);
-        Mat r_world2target = Mat.eye(3, 3, CvType.CV_64F);
-        Mat t_world2target = Mat.zeros(3, 1, CvType.CV_64F);
+        Mat r_world2target1 = Mat.eye(3, 3, CvType.CV_64F);
+        Mat t_world2target1 = Mat.zeros(3, 1, CvType.CV_64F);
+        Mat r_world2target2 = Mat.eye(3, 3, CvType.CV_64F);
+        Mat t_world2target2 = Mat.zeros(3, 1, CvType.CV_64F);
 
         // Let's say the camera is rotated 20 degrees looking down
         double angle = Math.toRadians(20);
@@ -154,57 +160,77 @@ public class TestHandEye {
         t_robot2cam.put(1, 0, 0.1);
 
         // Let's say the target is 2m in front of the robot at the start
-        t_world2target.put(0, 0, 2.0);
+        t_world2target1.put(0, 0, 2.0);
         // No rotation between world and target
 
+        // And the target2 is half a meter above the first target
+        t_world2target2.put(0, 0, 2.0);
+        t_world2target2.put(2, 0, 0.5);
+
         // Compute the fixed transforms that will be the same for all "measurements"
-        Mat bTt = makeHomogeneous(r_world2target, t_world2target);
+        Mat bTt1 = makeHomogeneous(r_world2target1, t_world2target1);
+        Mat bTt2 = makeHomogeneous(r_world2target2, t_world2target2);
         Mat gTc = makeHomogeneous(r_robot2cam, t_robot2cam);
-        System.out.println("bTt (world to target, predefined):\n" + TestHomography.matToString(bTt));
+        System.out.println("bTt 1 and 2 (world to target lower and upper):\n" + TestHomography.matToString(bTt1) + TestHomography.matToString(bTt2));
         System.out.println("gTc (robot to camera, predefined):\n" + TestHomography.matToString(gTc));
 
         // Simulate a series of odometry and visual measurements
         // In real life, these would be collected from the robot odometry and PhotonPoseEstimator
-        ArrayList<Mat> r_odos = new ArrayList<>(); // Rotation part of odometry measurements
-        ArrayList<Mat> t_odos = new ArrayList<>(); // Translation part of odometry measurements
-        ArrayList<Mat> r_visuals = new ArrayList<>(); // Rotation part of visual measurements
-        ArrayList<Mat> t_visuals = new ArrayList<>(); // Translation part of visual measurements
-        for (int i = 0; i < 40; i++) {
+        ArrayList<Mat> ls_odo_r = new ArrayList<>(); // Rotation part of odometry measurements
+        ArrayList<Mat> ls_odo_t = new ArrayList<>(); // Translation part of odometry measurements
+        ArrayList<Mat> ls_vis_r = new ArrayList<>(); // Rotation part of visual measurements
+        ArrayList<Mat> ls_vis_t = new ArrayList<>(); // Translation part of visual measurements
+        final int numMeasurements = 40;
+        for (int i = 0; i < numMeasurements; i++) {
             // To simulate movement, let's say the robot moves in some direction and rotates a bit
-            double x = i * 0.02;     // Move +2cm in X each step
-            double y = i * -0.02;   // Move -1cm in Y each step
-            double z = 0;           // No movement in Z
+            double x = ((double)i / numMeasurements) * 2.0; // Move 2m forward over the measurements
+            double y = ((double)i*i / numMeasurements/numMeasurements) * -1.0; // Move 1m sideways in a curve
+            double z1 = 0.0;           // For lower target, the height is 0.5m
+            double z2 = -0.5;           // For upper target, the height is 1.0m
             double theta = Math.toRadians(i); // Rotate a degrees each step
 
             // Create new rotation matrices and translation vectors to store the simulated data
             var r_odo = Mat.eye(3, 3, CvType.CV_64F);
-            var t_odo = Mat.zeros(3, 1, CvType.CV_64F);
-            var r_visual = Mat.eye(3, 3, CvType.CV_64F);
-            var t_visual = Mat.zeros(3, 1, CvType.CV_64F);
+            var t_odo1 = Mat.zeros(3, 1, CvType.CV_64F);
+            var t_odo2 = Mat.zeros(3, 1, CvType.CV_64F);
+            var r_visual1 = new Mat();
+            var t_visual1 = new Mat();
+            var r_visual2 = new Mat();
+            var t_visual2 = new Mat();
 
             // Odometry measurement, just what we assumed above about how the robot moves
-            t_odo.put(0, 0, x);
-            t_odo.put(1, 0, y);
-            t_odo.put(2, 0, z);
+            t_odo1.put(0, 0, x);
+            t_odo1.put(1, 0, y);
+            t_odo1.put(2, 0, z1);
+            t_odo2.put(0, 0, x);
+            t_odo2.put(1, 0, y);
+            t_odo2.put(2, 0, z2);
+            // We'll use the same odometry rotation for both targets
             r_odo.put(0, 0, Math.cos(theta));
             r_odo.put(0, 1, -Math.sin(theta));
             r_odo.put(1, 0, Math.sin(theta));
             r_odo.put(1, 1, Math.cos(theta));
+            Mat bTg = makeHomogeneous(r_odo, t_odo1);
 
             // Visual measurement needs to be modeled, let's use transformations:
-            // cTt = bTg^-1 * gTc^-1 * bTt -- see the description of this test for details
-            Mat bTg = makeHomogeneous(r_odo, t_odo);
-            Mat cTt = gTc.inv().matMul(bTg.inv()).matMul(bTt);
+            // \[ cTt = gTc^{-1} * bTg^{-1} * bTt \] -- see the description of this test for details
+            Mat cTt1 = gTc.inv().matMul(bTg.inv()).matMul(bTt1);
+            Mat cTt2 = gTc.inv().matMul(bTg.inv()).matMul(bTt2);
 
             // Extract rotation and translation from cTt into separate matrices
-            cTt.submat(0, 3, 0, 3).copyTo(r_visual);
-            cTt.submat(0, 3, 3, 4).copyTo(t_visual);
+            cTt1.submat(0, 3, 0, 3).copyTo(r_visual1);
+            cTt1.submat(0, 3, 3, 4).copyTo(t_visual1);
+            cTt2.submat(0, 3, 0, 3).copyTo(r_visual2);
+            cTt2.submat(0, 3, 3, 4).copyTo(t_visual2);
 
             // Add some noise to the visual measurement
             // Add noise to translation in all 3 axes
-            t_visual.put(0, 0, t_visual.get(0, 0)[0] + random.nextGaussian() * noiseLevel);
-            t_visual.put(1, 0, t_visual.get(1, 0)[0] + random.nextGaussian() * noiseLevel);
-            t_visual.put(2, 0, t_visual.get(2, 0)[0] + random.nextGaussian() * noiseLevel);
+            t_visual1.put(0, 0, t_visual1.get(0, 0)[0] + random.nextGaussian() * noiseLevel);
+            t_visual1.put(1, 0, t_visual1.get(1, 0)[0] + random.nextGaussian() * noiseLevel);
+            t_visual1.put(2, 0, t_visual1.get(2, 0)[0] + random.nextGaussian() * noiseLevel);
+            t_visual2.put(0, 0, t_visual2.get(0, 0)[0] + random.nextGaussian() * noiseLevel);
+            t_visual2.put(1, 0, t_visual2.get(1, 0)[0] + random.nextGaussian() * noiseLevel);
+            t_visual2.put(2, 0, t_visual2.get(2, 0)[0] + random.nextGaussian() * noiseLevel);
             // Add noise to rotation (small rotation in random direction)
             // Create a small rotation vector with random angles
             Mat v_noise = Mat.zeros(3, 1, CvType.CV_64F);
@@ -215,13 +241,25 @@ public class TestHandEye {
             Mat r_noise = new Mat();
             Calib3d.Rodrigues(v_noise, r_noise);
             // Apply the noise rotation to the visual rotation
-            r_visual = r_noise.matMul(r_visual);
+            r_visual1 = r_noise.matMul(r_visual1);
+            r_visual2 = r_noise.matMul(r_visual2);
 
             // Add the "measurements" to the lists
-            r_odos.add(r_odo);
-            t_odos.add(t_odo);
-            r_visuals.add(r_visual);
-            t_visuals.add(t_visual);
+            ls_odo_r.add(r_odo);
+            ls_odo_t.add(t_odo1);
+            ls_vis_r.add(r_visual1);
+            ls_vis_t.add(t_visual1);
+            // The upper visuals go with the same odometry rotation
+            ls_odo_r.add(r_odo);
+            ls_odo_t.add(t_odo2);
+            ls_vis_r.add(r_visual2);
+            ls_vis_t.add(t_visual2);
+
+            // For debugging, print out the simulated measurements
+            // System.out.println(HandEyeCalibration.flatStringMat(t_visual1, "Vis Trans, time=") + i);
+            // System.out.println(HandEyeCalibration.flatStringMat(r_visual1, "Vis Rotat"));
+            // System.out.println(HandEyeCalibration.flatStringMat(t_odo1, "Odo Trans"));
+            // System.out.println(HandEyeCalibration.flatStringMat(r_odo, "Odo Rotat"));
         }
 
         // Prepare empty matrices to receive the calibration result
@@ -229,7 +267,7 @@ public class TestHandEye {
         Mat t_calibrated = new Mat();
 
         // Now perform hand-eye calibration to find the camera-to-robot transform
-        Calib3d.calibrateHandEye(r_odos, t_odos, r_visuals, t_visuals, r_calibrated, t_calibrated);
+        Calib3d.calibrateHandEye(ls_odo_r, ls_odo_t, ls_vis_r, ls_vis_t, r_calibrated, t_calibrated, calib_method);
         // System.out.println("Calibrated Rotation:\n" + r_cam2robot.dump());
         // System.out.println("Calibrated Translation:\n" + t_cam2robot.dump());
         Mat robotToCamera = makeHomogeneous(r_calibrated, t_calibrated);
@@ -298,7 +336,8 @@ public class TestHandEye {
                 Mat robotToCamera = makeHomogeneous(r_calibrated, t_calibrated);
                 System.out.println("robotToCamera estimated with method " +method+ ":\n" + TestHomography.matToString(robotToCamera));
             } catch (Exception e) {
-                e.printStackTrace();
+                // e.printStackTrace();
+                System.out.println("calibrateHandEye failed with method " + method + ": " + e.getMessage());
             }
         }
     }

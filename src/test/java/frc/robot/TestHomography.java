@@ -59,7 +59,7 @@ public class TestHomography {
                     sb.append(", ");
                 }
             }
-            sb.append("]");
+            sb.append(" ]");
             return sb.toString();
         }
         else if (m.cols() == 1) {
@@ -70,7 +70,7 @@ public class TestHomography {
                     sb.append(", ");
                 }
             }
-            sb.append("]");
+            sb.append(" ]");
             return sb.toString();
         }
         for (int i = 0; i < m.rows(); i++) {
@@ -81,7 +81,7 @@ public class TestHomography {
                     sb.append(", ");
                 }
             }
-            sb.append("]\n");
+            sb.append(" ]\n");
         }
         return sb.toString();
     }
