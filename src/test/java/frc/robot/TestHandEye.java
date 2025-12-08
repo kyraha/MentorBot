@@ -29,7 +29,7 @@ public class TestHandEye {
      * The robot started at an arbitrary position and moved around while looking at a fixed target.
      * The camera was mounted rigidly on the robot. The target was static in the world (bTt is fixed but unknown).
      */
-    static double[][] data = {
+    static public double[][] data = {
         {1.045542451462151, -0.5562181931493166, -0.1926964077866995}, // Vis Trans, time=32.426846
         {-0.8261555410102377, 0.4081575639585938, -0.38842557207458434, 0.2966814689805617, 0.9011953670939317, 0.31595413637420516, 0.4790063966395623, 0.14578859115795112, -0.8656203317081699}, // Vis Rotat
         {-1.0742493187638629, -0.04690463025733676, 0.0}, // Odo Trans
@@ -347,7 +347,7 @@ public class TestHandEye {
      * It is not a real test.
      * So we just print out the data in the required format.
      */
-    @Test
+    // @Test
     void exportOdometryData() {
         for (int i=0; i < data.length; i+=4) {
             // Odometry data is in the 3rd and 4th row of each 4-row block
@@ -361,7 +361,7 @@ public class TestHandEye {
             double x = odoT[0];
             double y = odoT[1];
             double theta = r_rotation.toRotation2d().getRadians();
-            var axis = r_rotation.getAxis();
+            // var axis = r_rotation.getAxis();
             // System.out.println("Axis: " + axis + " Angle: " + Math.toDegrees(theta));
 
             System.out.println(x + "\t" + y + "\t" + theta);

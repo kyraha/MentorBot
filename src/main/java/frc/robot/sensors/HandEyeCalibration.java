@@ -2,6 +2,8 @@ package frc.robot.sensors;
 
 import edu.wpi.first.math.MathSharedStore;
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
@@ -9,6 +11,8 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Drivetrain.CommandSwerveDrivetrain;
+
+import org.apache.commons.math3.stat.regression.OLSMultipleLinearRegression;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -175,5 +179,64 @@ public  class HandEyeCalibration extends Command
         }
         sb.append("}, // ").append(name);
         return sb.toString();
+    }
+
+    /**
+     * Find camera rotation (except yaw) using linear regression by making multiple
+     * measurements of 3D points and then derive the rotation needed to align the camera's "down"
+     * direction with the horizontal plane normal. Where the plane is what all the measured points belong to.
+     * 
+     * The plane equation is of the form: ax + by + cz + d = 0 (in camera coordinates)
+     * For our purposes, we fix c = -1, so the equation becomes: ax + by - z + d = 0
+     * Rearranging gives: z = d + ax + by
+     * 
+     * We can use ordinary least squares regression to find the coefficients a, b, and d.
+     * 
+     * Once we have the plane's normal vector (a, b, -1), we can compute the rotation
+     * needed to align the camera's "down" vector (0, 0, -1) with the plane's normal.
+     * 
+     * @param tTcTranslations List of translation matrices from camera to target
+     * @param targetIsBelowCamera True if the target is located below the camera from the camera POV
+     * @return Rotation3d representing the roll and pitch of the camera (yaw is not determined here)
+     */
+    static public Rotation3d estimateRollPitch(ArrayList<Mat> tTcTranslations, boolean targetIsBelowCamera) {
+        // We collected a bunch of sample data points (x, y, z)
+        // Let's put them into 2 separate arrays for regression
+        double[] z = new double[tTcTranslations.size()];
+        double[][] xy = new double[tTcTranslations.size()][2];
+        int index = 0;
+        for(Mat tTc : tTcTranslations) {
+            xy[index][0] = tTc.get(0, 0)[0];
+            xy[index][1] = tTc.get(1, 0)[0];
+            z[index] = tTc.get(2, 0)[0];
+            index++;
+        }
+
+        // Create a regression model and fit the data
+        OLSMultipleLinearRegression regression = new OLSMultipleLinearRegression();
+        regression.newSampleData(z, xy);
+        System.out.println( // Just to see how good the fit is
+            String.format("Standard Error: % .4f; R^2: % .4f",
+            regression.estimateRegressionStandardError(),
+            regression.calculateRSquared()));
+
+        double[] coefficients = regression.estimateRegressionParameters();
+        double d = coefficients[0];
+        double a = coefficients[1];
+        double b = coefficients[2];
+        double c = -1.0; // c is fixed to -1 (why? read above)
+        System.out.println(String.format("Plane equation: %.3fx %+.3fy %+.3fz %+.3f = 0", a, b, c, d));
+
+        // The plane normal vector from the camera POV is (a, b, c)
+        Vector<N3> planeNormal = VecBuilder.fill(a, b, c);
+
+        // Camera's own "down" direction is simply (0, 0, -1), or (0, 0, 1) if target is above camera
+        Vector<N3> cameraNormal = VecBuilder.fill(0, 0, targetIsBelowCamera ? -1 : 1);
+
+        // Camera is rotated as if plane would be rotated to match the camera normal
+        // i.e, the rotation direction is from true "down" (plane normal) to camera "down" (camera normal)
+        return new Rotation3d(planeNormal, cameraNormal);
+
+        // However, yaw here is fantom and must be adjusted further (to be relative to what?)
     }
 }
