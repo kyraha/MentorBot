@@ -239,4 +239,10 @@ public  class HandEyeCalibration extends Command
 
         // However, yaw here is fantom and must be adjusted further (to be relative to what?)
     }
+
+    public static Rotation3d Rotation3dFromMat(Mat rMat) {
+        double[] r_buffer = new double[9];
+        rMat.get(0, 0, r_buffer);
+        return new Rotation3d(new Matrix<N3,N3>(N3.instance, N3.instance, r_buffer));
+    }
 }
