@@ -31,7 +31,7 @@ public class PelicanLimiter {
     /**
      * Calculate the limit for the linear acceleration based on the current speed.
      * The theory is that the robot can accelerate less when it's already moving fast.
-     * @param vector The 2D vector of the current speed
+     * @param speed The current speed
      * @return The top limit for the allowed linear acceleration
      */
     public static double getDiminishingLimit (double speed) {

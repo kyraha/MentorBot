@@ -17,6 +17,8 @@ import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
+import frc.robot.Power.PowerBroker;
+
 public class ElevatorSubsystem extends SubsystemBase {
     public static class Constants {
         // Elevator heights in rotations of the Left Motor
@@ -54,6 +56,8 @@ public class ElevatorSubsystem extends SubsystemBase {
 
     private final MotionMagicDutyCycle motionMagicRequest;
     private boolean isZeroed = false;
+    private double powerPriority;
+    private PowerBroker PowerAccount;
 
     public ElevatorSubsystem() {
         leftMotor = new TalonFX(Constants.canMotorLeft);
@@ -81,6 +85,9 @@ public class ElevatorSubsystem extends SubsystemBase {
 
         leftMotor.getConfigurator().apply(config);
         rightMotor.setControl(new Follower(Constants.canMotorLeft, true));
+
+        powerPriority = 1;
+        PowerAccount = new PowerBroker(() -> this.powerPriority);
     }
 
     /**
