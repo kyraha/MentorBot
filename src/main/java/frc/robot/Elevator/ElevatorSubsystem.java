@@ -57,7 +57,7 @@ public class ElevatorSubsystem extends SubsystemBase {
     private final MotionMagicDutyCycle motionMagicRequest;
     private boolean isZeroed = false;
     private double powerPriority;
-    private PowerBroker PowerAccount;
+    private PowerBroker powerBroker;
 
     public ElevatorSubsystem() {
         leftMotor = new TalonFX(Constants.canMotorLeft);
@@ -87,7 +87,7 @@ public class ElevatorSubsystem extends SubsystemBase {
         rightMotor.setControl(new Follower(Constants.canMotorLeft, true));
 
         powerPriority = 1;
-        PowerAccount = new PowerBroker(() -> this.powerPriority);
+        powerBroker = new PowerBroker(() -> this.powerPriority);
     }
 
     /**

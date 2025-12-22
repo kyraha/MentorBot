@@ -13,10 +13,10 @@ import java.util.function.Supplier;
  * 
  * Example of use:
  * <pre>{@code
- *  import static frc.robot.Power.PowerAccount;
+ *  import static frc.robot.Power.PowerBroker;
  * 
  *  public class MySubsystem extends SubsystemBase {
- *      PowerAccount powerBroker = new PowerBroker(() -> 1.0); // Simple priority always = 1
+ *      PowerBroker powerBroker = new PowerBroker(() -> 1.0); // Simple priority always = 1
  * 
  *      void motorOn() {
  *          double power = powerBroker.requestPower(42);
@@ -35,7 +35,7 @@ public class PowerBroker {
      * Constructs a broker that will open an account at the central power bank.
      * The consumer class must provide a "priority supplier" that can be as simple as returning
      * a constant or a variable, or as elaborate as calculating the priority value in flight.
-     * The simplest supplier can be provided as <code>new PowerAccount(() -> 1.0)</code>
+     * The simplest supplier can be provided as <code>new PowerBroker(() -> 1.0)</code>
      * <P>
      * The range of the priorities is on the programmers' discretion.
      * Priority is relative among the consumers of the same power bank.
@@ -50,13 +50,13 @@ public class PowerBroker {
     }
 
     /**
-     * Opens a new account at an arbitrary bank.
-     * This constructor shouldn't probably be used outside of its class and may be made private in the future.
+     * Opens a new account at a given bank.
+     * This constructor shouldn't be used outside of its class therefore it's made private.
      * 
      * @param parent    the bank where to register this account.
      * @param prioritySupplier  a <code>Double</code> supplier that will return the consumer's priority
      */
-    public PowerBroker(PowerBank parent, Supplier<Double> prioritySupplier) {
+    private PowerBroker(PowerBank parent, Supplier<Double> prioritySupplier) {
         this.powerBank = parent;
         this.prioritySupplier = prioritySupplier;
         this.powerRequested = 0;

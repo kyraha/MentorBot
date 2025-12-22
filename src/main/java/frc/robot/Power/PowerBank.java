@@ -13,6 +13,7 @@ public class PowerBank {
 
     private java.util.List<PowerBroker> consumers;
     private final double maxPower;
+    public double getMaxPower() {return maxPower;}
 
     /**
      * Constructs a Power Bank.
@@ -47,7 +48,7 @@ public class PowerBank {
      * in the same manner, and then divided by the total weight - that's the ratio of power that
      * the requester can get at most at this moment.
      * 
-     * @param requester the account of the requester.
+     * @param requester the account manager of the requester, a PowerBroker
      * @return  the amount of power allowed to draw (Watts)
      */
     public double allocatePower(PowerBroker requester) {
