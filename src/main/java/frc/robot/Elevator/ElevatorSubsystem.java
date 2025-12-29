@@ -4,6 +4,7 @@
 
 package frc.robot.Elevator;
 
+import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicDutyCycle;
@@ -12,8 +13,13 @@ import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.Notifier;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.simulation.DIOSim;
+import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
@@ -53,6 +59,8 @@ public class ElevatorSubsystem extends SubsystemBase {
     private final TalonFX rightMotor;
     private final DigitalInput bottomLimitSwitch;
     private final DigitalInput topLimitSwitch;
+    private final DIOSim simBottomSwitch;
+    private final DIOSim simTopSwitch;
 
     private final MotionMagicDutyCycle motionMagicRequest;
     private boolean isZeroed = false;
@@ -65,6 +73,9 @@ public class ElevatorSubsystem extends SubsystemBase {
         bottomLimitSwitch = new DigitalInput(Constants.dioBottomLimitSwitch);
         topLimitSwitch = new DigitalInput(Constants.dioTopLimitSwitch);
         motionMagicRequest = new MotionMagicDutyCycle(0);
+
+        simBottomSwitch = new DIOSim(bottomLimitSwitch);
+        simTopSwitch = new DIOSim(topLimitSwitch);
 
         var config = new TalonFXConfiguration();
         config.MotionMagic
@@ -88,6 +99,10 @@ public class ElevatorSubsystem extends SubsystemBase {
 
         powerPriority = 1;
         powerBroker = new PowerBroker(() -> this.powerPriority);
+
+        if (Utils.isSimulation()) {
+            startSimThread();
+        }
     }
 
     /**
@@ -118,6 +133,48 @@ public class ElevatorSubsystem extends SubsystemBase {
             leftMotor.set(-0.1);
         }
     }
+
+    private static final double kSimLoopPeriod = 0.005; // 5 ms
+    private Notifier m_simNotifier;
+    double m_lastSimTime;
+    private void startSimThread() {
+        m_lastSimTime = Utils.getCurrentTimeSeconds();
+
+        /* Run simulation at a faster rate so PID gains behave more reasonably */
+        m_simNotifier = new Notifier(() -> {
+            final double currentTime = Utils.getCurrentTimeSeconds();
+            double deltaTime = currentTime - m_lastSimTime;
+            m_lastSimTime = currentTime;
+
+            /* use the measured time delta, get battery voltage from WPILib */
+            updateSimState(deltaTime, RobotController.getBatteryVoltage());
+        });
+        m_simNotifier.startPeriodic(kSimLoopPeriod);
+    }
+
+    private ElevatorSim simElevator = new ElevatorSim(
+        DCMotor.getFalcon500(2),
+        9.1367,
+        32.5,
+        0.0254,
+        0,
+        Constants.kElevatorRangeMeters / 4.0,
+        true,
+        0.05);
+    private void updateSimState(double deltaTime, double batteryVolts) {
+        var simTalon = leftMotor.getSimState();
+        simTalon.setSupplyVoltage(batteryVolts);
+        var motorVolts = simTalon.getMotorVoltage();
+        simElevator.setInputVoltage(motorVolts);
+        simElevator.update(deltaTime);
+        double ratio = Constants.kElevatorMaxHeight / (Constants.kElevatorRangeMeters/4.0);
+        simTalon.setRawRotorPosition(simElevator.getPositionMeters() * ratio);
+        simTalon.setRotorVelocity(simElevator.getVelocityMetersPerSecond() * ratio);
+        simBottomSwitch.setValue(!simElevator.hasHitLowerLimit());
+        simTopSwitch.setValue(simElevator.hasHitUpperLimit());
+    }
+
+
 
     /**
      * Returns the maximum horizontal acceleration allowed by the elevator height
@@ -163,6 +220,7 @@ public class ElevatorSubsystem extends SubsystemBase {
         builder.addBooleanProperty("Bottom Limit", this::brokeBottomLimitSwitch, null);
         builder.addBooleanProperty("Top Limit", this::brokeTopLimitSwitch, null);
         builder.addBooleanProperty("Is Zeroed", ()->isZeroed, null);
+        builder.addDoubleProperty("Stator Amps", leftMotor.getStatorCurrent()::getValueAsDouble, null);
     }
 
     @Override
@@ -173,13 +231,13 @@ public class ElevatorSubsystem extends SubsystemBase {
             // On the broken bottom limit switch set zero even if already zeroed
             if (getPosition() != 0) {
                 leftMotor.setPosition(0);
-                isZeroed = true;
             }
+            isZeroed = true;
         }
         if (brokeTopLimitSwitch()) {
             stop();
         }
-        if (leftMotor.getStatorCurrent().getValueAsDouble() > Constants.maxStatorCurrent) {
+        if (!Utils.isSimulation() && leftMotor.getStatorCurrent().getValueAsDouble() > Constants.maxStatorCurrent) {
             stop();
         }
     }
