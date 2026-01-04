@@ -12,6 +12,7 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.ctre.phoenix6.sim.ChassisReference;
 
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.util.sendable.SendableBuilder;
@@ -40,14 +41,14 @@ public class ElevatorSubsystem extends SubsystemBase {
         public static final double maxStatorCurrent = 40;
 
         // Elevator speed and acceleration in rotations per second or second squared
-        private static double magicVelocity = 100;
+        private static double magicVelocity = 50;
         private static double magicAcceleration = 120;
 
         // Elevator PID values
         private static double slot0kG = 0.045;
-        private static double slot0kP = 1;
+        private static double slot0kP = Utils.isSimulation() ? 0.013 : 1;
         private static double slot0kI = 0;
-        private static double slot0kD = 0.025;
+        private static double slot0kD = Utils.isSimulation() ? 0.001 : 0.025;
 
         public static final int canMotorLeft = 18;
         public static final int canMotorRight = 19;
@@ -66,6 +67,7 @@ public class ElevatorSubsystem extends SubsystemBase {
     private boolean isZeroed = false;
     private double powerPriority;
     private PowerBroker powerBroker;
+    private double currentSetpoint = 0;
 
     public ElevatorSubsystem() {
         leftMotor = new TalonFX(Constants.canMotorLeft);
@@ -122,19 +124,21 @@ public class ElevatorSubsystem extends SubsystemBase {
      */
     public void stop() {
         leftMotor.set(0);
+        currentSetpoint = 0;
     }
 
     public void goToSetpoint(double setpoint) {
         if (isZeroed) {
             leftMotor.setControl(motionMagicRequest.withPosition(setpoint));
+            currentSetpoint = setpoint;
         }
         else {
             // If not yet zeroed, we need to find the zero by slowly moving down instead
             leftMotor.set(-0.1);
+            currentSetpoint = 0;
         }
     }
 
-    private static final double kSimLoopPeriod = 0.005; // 5 ms
     private Notifier m_simNotifier;
     double m_lastSimTime;
     private void startSimThread() {
@@ -149,29 +153,36 @@ public class ElevatorSubsystem extends SubsystemBase {
             /* use the measured time delta, get battery voltage from WPILib */
             updateSimState(deltaTime, RobotController.getBatteryVoltage());
         });
-        m_simNotifier.startPeriodic(kSimLoopPeriod);
+        m_simNotifier.startPeriodic(0.005);
     }
 
     private ElevatorSim simElevator = new ElevatorSim(
         DCMotor.getFalcon500(2),
         9.1367,
-        32.5,
+        15.45,
         0.0254,
         0,
-        Constants.kElevatorRangeMeters / 4.0,
+        (Constants.kElevatorRangeMeters + 0.06) / 4.0,
         true,
         0.05);
+    private double previousVelocity = 0;
     private void updateSimState(double deltaTime, double batteryVolts) {
         var simTalon = leftMotor.getSimState();
+        simTalon.Orientation = ChassisReference.CounterClockwise_Positive;
         simTalon.setSupplyVoltage(batteryVolts);
         var motorVolts = simTalon.getMotorVoltage();
         simElevator.setInputVoltage(motorVolts);
         simElevator.update(deltaTime);
-        double ratio = Constants.kElevatorMaxHeight / (Constants.kElevatorRangeMeters/4.0);
-        simTalon.setRawRotorPosition(simElevator.getPositionMeters() * ratio);
+        double ratio = Constants.kElevatorMaxHeight / ((Constants.kElevatorRangeMeters + 0.06)/4.0);
+        double elevatorPosition = simElevator.getPositionMeters() - 0.03;
+        double elevatorVelocity = simElevator.getVelocityMetersPerSecond();
+        double elevatorAcceleration = (elevatorVelocity - previousVelocity) / deltaTime;
+        simTalon.setRawRotorPosition(elevatorPosition * ratio);
         simTalon.setRotorVelocity(simElevator.getVelocityMetersPerSecond() * ratio);
-        simBottomSwitch.setValue(!simElevator.hasHitLowerLimit());
-        simTopSwitch.setValue(simElevator.hasHitUpperLimit());
+        simTalon.setRotorAcceleration(elevatorAcceleration * ratio);
+        simBottomSwitch.setValue(!simElevator.wouldHitLowerLimit(elevatorPosition));
+        simTopSwitch.setValue(simElevator.wouldHitUpperLimit(elevatorPosition));
+        previousVelocity = elevatorVelocity;
     }
 
 
@@ -221,22 +232,29 @@ public class ElevatorSubsystem extends SubsystemBase {
         builder.addBooleanProperty("Top Limit", this::brokeTopLimitSwitch, null);
         builder.addBooleanProperty("Is Zeroed", ()->isZeroed, null);
         builder.addDoubleProperty("Stator Amps", leftMotor.getStatorCurrent()::getValueAsDouble, null);
+        builder.addDoubleProperty("Setpoint", () -> this.currentSetpoint, null);
     }
 
+    private boolean aboveBottomLimitSwitch = true;
     @Override
     public void periodic() {
         // Constantly monitor limit switches and the stator current
         if (brokeBottomLimitSwitch()) {
-            stop();
-            // On the broken bottom limit switch set zero even if already zeroed
-            if (getPosition() != 0) {
+            if (aboveBottomLimitSwitch) {
+                aboveBottomLimitSwitch = false;
+                stop();
                 leftMotor.setPosition(0);
+                isZeroed = true;
             }
-            isZeroed = true;
         }
+        else {
+            aboveBottomLimitSwitch = true;
+        }
+
         if (brokeTopLimitSwitch()) {
             stop();
         }
+
         if (!Utils.isSimulation() && leftMotor.getStatorCurrent().getValueAsDouble() > Constants.maxStatorCurrent) {
             stop();
         }
