@@ -3,6 +3,7 @@ package frc.robot.Drivetrain;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import frc.robot.Power.PowerBroker;
 
 /**
  * This class is a limiter of accelerations for driving a swerve robot.
@@ -10,14 +11,17 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
  * Important: The "turn" here is the curvature in the robot's path, not the rotation of the robot.
  */
 public class PelicanLimiter {
-    private static final double kAccelFactor = 12.0 * 40.0 / 70.0; // Watts available per kg of robot
-    private static final double kMaxLinearAccel = 8.0; // m/s^2
+    private static final double kRobotMassKg = 70;
+    private static final double kMaxLinearAccel = 10.0; // m/s^2
     private static final double kMaxLinearDecel = -10.0; // m/s^2
     private static final double kMaxSkidAccel = 9.8;
 
     private boolean isAngleReal = false;
     public final VariableSlewRateLimiter driveLimiter = new VariableSlewRateLimiter(kMaxLinearAccel, kMaxLinearDecel, 0);
     public final VariableSlewRateLimiter thetaLimiter = new VariableSlewRateLimiter(0).enableRotationalInput();
+
+    private double powerPriority = 1;
+    private PowerBroker powerBroker = new PowerBroker(() -> this.powerPriority);
 
     /**
      * Check if the vector is virtually zero. This is purely mathematical deadband to avoid division by zero.
@@ -29,14 +33,23 @@ public class PelicanLimiter {
     }
 
     /**
-     * Calculate the limit for the linear acceleration based on the current speed.
+     * Calculate the limit for the linear acceleration based on the current and desired speeds.
+     * 
      * The theory is that the robot can accelerate less when it's already moving fast.
-     * @param speed The current speed
+     * \[ a = \frac{P}{m}|\bar{V}| \]
+     * where a is the acceleration, P - power, m - mass, V - avarage speed
+     * 
+     * @param prevSpeed The current speed
      * @return The top limit for the allowed linear acceleration
      */
-    public static double getDiminishingLimit (double speed) {
-        if (speed > kAccelFactor / kMaxLinearAccel) {
-            return kAccelFactor / speed;
+    public double getAccelerationLimit (double prevSpeed, double desiredSpeed) {
+        double dt = 0.02; // seconds
+        double averageSpeed = (prevSpeed + desiredSpeed) / 2.0;
+        double power = kRobotMassKg * averageSpeed * (desiredSpeed - prevSpeed) / dt;
+        power = powerBroker.requestPower(power);
+        double accelFactor = power / kRobotMassKg; // Watts available per kg of robot
+        if (averageSpeed > accelFactor / kMaxLinearAccel) {
+            return accelFactor / averageSpeed;
         }
         else {
             return kMaxLinearAccel;
@@ -84,9 +97,10 @@ public class PelicanLimiter {
                 double cosine = Math.cos(thetaLimiter.getDelta(vector.getAngle().getRadians()));
                 if(cosine > 0) {
                     // If turn is manageable (angle is "small"), keep driving
-                    driveLimiter.updatePositiveLimit(getDiminishingLimit(driveLimiter.lastValue()));
+                    double mag = vector.getNorm() * cosine;
+                    driveLimiter.updatePositiveLimit(getAccelerationLimit(driveLimiter.lastValue(), mag));
                     // Throttle desired magnitude by cosine of the desired turn then calculate new magnitude
-                    double mag = driveLimiter.calculate(vector.getNorm() * cosine);
+                    mag = driveLimiter.calculate(mag);
                     // Define the limit for the angle based on the current speed
                     double turnLimit = getTurnLimit(mag);
                     thetaLimiter.updateLimits(turnLimit, -turnLimit);
