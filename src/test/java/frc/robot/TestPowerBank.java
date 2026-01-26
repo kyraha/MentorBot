@@ -45,6 +45,18 @@ public class TestPowerBank {
         // Broker One has priority = 1.0 so should get only one power unit
         assertTrue(p1 <= powerUnit);
         // System.out.println("Returned power: p1="+p1+", p2="+p2);
+        assertTrue(p1+p2 <= centralBank.getMaxPower());
+    }
+
+    @Test
+    void testDiscrete() {
+        double p2 = broker2.requestPower(powerUnit * 2);
+        double p1 = broker1.requestPower(powerUnit * 2, powerUnit * 2);
+        // System.out.println("Returned power: p1="+p1+", p2="+p2);
+        p2 = broker2.requestPower(powerUnit * 2);
+        // System.out.println("Returned power: p1="+p1+", p2="+p2);
+        assertEquals(0, p1);
+        assertEquals(powerUnit*2, p2);
     }
 
     // This stress test only makes sense if run on the robot hardware

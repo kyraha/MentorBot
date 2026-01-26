@@ -30,6 +30,8 @@ public class PowerBroker {
     public PowerBank powerBank;                 // Where this account is registered
     public Supplier<Double> prioritySupplier;   // Higher number means higher priority
     public double powerRequested;               // in watts
+    public double powerMinimum;
+    public boolean isConsuming = false;
 
     /**
      * Constructs a broker that will open an account at the central power bank.
@@ -60,6 +62,7 @@ public class PowerBroker {
         this.powerBank = parent;
         this.prioritySupplier = prioritySupplier;
         this.powerRequested = 0;
+        this.powerMinimum = 0;
         parent.registerConsumer(this);
     }
 
@@ -81,10 +84,12 @@ public class PowerBroker {
      * that the consumer won't exceed the allowed amount.
      * 
      * @param wattsWanted   amount of power wanted at the moment (Watts)
+     * @param wattsLeast    lower threshold below which the power is too low to use at all
      * @return  allowed amount of power (Watts)
      */
-    public double requestPower(double wattsWanted) {
+    public double requestPower(double wattsWanted, double wattsLeast) {
         this.powerRequested = wattsWanted;
+        this.powerMinimum = wattsLeast;
         if (wattsWanted > 0.0 && getPriority() > 0.0) {
             return powerBank.allocatePower(this);
         }
@@ -94,11 +99,20 @@ public class PowerBroker {
     }
 
     /**
+     * Returns as much power as available up to the requested value.
+     * This is a shortcut overload for a single argument call in case if there's no lower threshold
+     * @param wattsWanted   amount of power wanted at the moment (Watts)
+     * @return  allowed amount of power (Watts)
+     */
+    public double requestPower(double wattsWanted) {
+        return requestPower(wattsWanted, 0);
+    }
+
+    /**
      * Resets the power need on this account to zero.
-     * This is a syntax candy that calls {@link #requestPower(double)} with zero value.
      * This method should be called every time when the consumer goes dormant.
      */
     public void releasePower() {
-        requestPower(0);
+        isConsuming = false;
     }
 }

@@ -52,16 +52,25 @@ public class PowerBank {
      * @return  the amount of power allowed to draw (Watts)
      */
     public double allocatePower(PowerBroker requester) {
-        double totalRequested = consumers.stream().mapToDouble(c -> c.powerRequested).sum();
+        // Set the 'consuming' flag to true so this consumer is counted in the math
+        requester.isConsuming = true;
+        // Total power requested by all consumers that are actively consuming the power
+        double totalRequested = consumers.stream().mapToDouble(c -> c.isConsuming ? c.powerRequested : 0).sum();
         if (totalRequested <= maxPower) {
             // Full allocation
             return requester.powerRequested;
         } else {
             // Proportional allocation based on priority
             double wantedWeight = requester.getPriority() * requester.powerRequested;
-            double totalWeight = consumers.stream().mapToDouble(c -> c.getPriority() * c.powerRequested).sum();
+            double totalWeight = consumers.stream().mapToDouble(c -> c.isConsuming ? c.getPriority() * c.powerRequested : 0).sum();
             double allowedPower = (wantedWeight / totalWeight) * maxPower;
-            return Math.min(allowedPower, requester.powerRequested);
+            if (allowedPower >= requester.powerMinimum) {
+                return Math.min(allowedPower, requester.powerRequested);
+            }
+            else {
+                requester.isConsuming = false;
+                return 0;
+            }
         }
     }
 }
