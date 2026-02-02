@@ -1,5 +1,7 @@
 package frc.robot.Power;
 
+import java.util.List;
+
 /**
  * Power Bank is a class for managing power consumption among multiple consumers when
  * the power is scarce as it usually is in an FRC robot during a match.
@@ -37,39 +39,67 @@ public class PowerBank {
     }
 
     /**
-     * Serves a request for power by a consumer. Calculates the max available power for the given
-     * requester and returns the amount allowed to use by the requester.
-     * This method should not be used directly from the robot code.
-     * Use {@link PowerBroker#requestPower} instead.
-     * <P>
-     * The current logic is really straightforward and simple.
-     * All amounts of power being requested so far are multiplied by the corresponding priorities
-     * and summed together - that's the total weight of the system. Then the requester weight is calulated
-     * in the same manner, and then divided by the total weight - that's the ratio of power that
-     * the requester can get at most at this moment.
+     * Allocates power among consumers (brokers).
      * 
-     * @param requester the account manager of the requester, a PowerBroker
-     * @return  the amount of power allowed to draw (Watts)
+     * This method is expected to be called periodically to keep the allocation up to date.
+     * When consumers put requests with their brokers the new allocation is not available until
+     * this method is called. So make sure it's called regularly and at least as often as
+     * the consumers change their power demand. Likely spot would be the Robot's periodic().
+     * 
+     * The logic in this method is the meat of the Power Bank class. Here are the formulas:
+     * 
+     * \[ Priority_{avg} = \frac{\sum_i^N {(Requested_i \times Priority_i)}} {\sum_i^N {Requested_i}} \]
+     *
+     * \[ Excess = \sum_i^N {Requested_i} - MaxPower \]
+     *
+     * \[ Power_{allowed} = Requested - \frac 1 {Priority} \times \frac {Excess \times Priority_{avg}} {N} \]
      */
-    public double allocatePower(PowerBroker requester) {
-        // Set the 'consuming' flag to true so this consumer is counted in the math
-        requester.isConsuming = true;
-        // Total power requested by all consumers that are actively consuming the power
-        double totalRequested = consumers.stream().mapToDouble(c -> c.isConsuming ? c.powerRequested : 0).sum();
-        if (totalRequested <= maxPower) {
-            // Full allocation
-            return requester.powerRequested;
-        } else {
-            // Proportional allocation based on priority
-            double wantedWeight = requester.getPriority() * requester.powerRequested;
-            double totalWeight = consumers.stream().mapToDouble(c -> c.isConsuming ? c.getPriority() * c.powerRequested : 0).sum();
-            double allowedPower = (wantedWeight / totalWeight) * maxPower;
-            if (allowedPower >= requester.powerMinimum) {
-                return Math.min(allowedPower, requester.powerRequested);
+    public synchronized void allocatePower() {
+        // We make this method synchronized because the entire bank must be locked
+        // while all accounts are being recalculated and modified
+
+        // Reset all accounts with non-zero requests as consuming then start reallocation
+        consumers.forEach(c -> {
+            c.isConsuming = c.powerRequested > 0.0;
+            c.powerAllowed = 0.0;
+        });
+        boolean needToReallocate = true;
+
+        // Iterate until all consumers either are allocated or were denied in previous iteration
+        while (needToReallocate) {
+            List<PowerBroker> activeConsumers = consumers.stream().filter(c -> c.isConsuming).toList();
+            if (activeConsumers.size() == 0) return;
+
+            needToReallocate = false; // for now
+            double totalRequested = activeConsumers.stream().mapToDouble(c -> c.powerRequested).sum();
+
+            if (totalRequested > maxPower) {
+                // Limit allocation because requested exceeds the max
+                double excess = totalRequested - maxPower;
+                double totalWeight = activeConsumers.stream().mapToDouble(c -> c.powerRequested * c.getPriority()).sum();
+                double avgPriority = totalWeight / totalRequested;
+                double tax = excess * avgPriority / activeConsumers.size();
+                // System.out.println("Tax="+tax+", Consumers: "+activeConsumers);
+
+                for (PowerBroker c : activeConsumers) {
+                    // Find how much power allowed and compare it to the minimum
+                    // If not enough then exclude the consumer and need to reallocate
+                    double allowed = c.powerRequested - tax / c.getPriority();
+                    if (allowed >= c.powerMinimum) {
+                        c.powerAllowed = allowed;
+                    }
+                    else {
+                        c.isConsuming = false;
+                        needToReallocate = true;
+                    }
+                }
             }
             else {
-                requester.isConsuming = false;
-                return 0;
+                // Max power is not exceeded - allocate as requested
+                activeConsumers.forEach(c -> {
+                    c.powerAllowed = c.powerRequested;
+                    c.isConsuming = true;
+                });
             }
         }
     }

@@ -31,7 +31,12 @@ public class PowerBroker {
     public Supplier<Double> prioritySupplier;   // Higher number means higher priority
     public double powerRequested;               // in watts
     public double powerMinimum;
+    public double powerAllowed;
     public boolean isConsuming = false;
+
+    public String toString() {
+        return "Req:" + powerRequested + ", Allowed:" + powerAllowed + ", Prio:" + getPriority();
+    }
 
     /**
      * Constructs a broker that will open an account at the central power bank.
@@ -49,6 +54,10 @@ public class PowerBroker {
      */
     public PowerBroker(Supplier<Double> prioritySupplier) {
         this(centralBank, prioritySupplier);
+    }
+
+    public PowerBroker(double priority) {
+        this(centralBank, () -> priority);
     }
 
     /**
@@ -77,6 +86,16 @@ public class PowerBroker {
     }
 
     /**
+     * Get the latest power allowence after the bank performed allocation.
+     * Remeber: requested power is not immediately available until the bank
+     * performs the power allocation which usually happens in a periodic loop.
+     * @return  allowed amount of power (Watts)
+     */
+    public double getAllowedPower() {
+        return this.powerAllowed;
+    }
+
+    /**
      * Returns as much power as available up to the requested value.
      * It is imperative to not exceed the allowed amount to avoid whole system brownouts.
      * Before calling this method precalculate the "wanted" amount as close as possible for the optimal power management.
@@ -88,14 +107,11 @@ public class PowerBroker {
      * @return  allowed amount of power (Watts)
      */
     public double requestPower(double wattsWanted, double wattsLeast) {
+        // Update the power requirements for reallocation
         this.powerRequested = wattsWanted;
         this.powerMinimum = wattsLeast;
-        if (wattsWanted > 0.0 && getPriority() > 0.0) {
-            return powerBank.allocatePower(this);
-        }
-        else {
-            return 0;
-        }
+        // and return what was allocated in the last allocation
+        return getAllowedPower();
     }
 
     /**
@@ -113,6 +129,6 @@ public class PowerBroker {
      * This method should be called every time when the consumer goes dormant.
      */
     public void releasePower() {
-        isConsuming = false;
+        requestPower(0);
     }
 }
