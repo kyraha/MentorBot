@@ -69,6 +69,17 @@ public class TestPowerBank {
     }
 
     @Test
+    void testUnbalancedDisc() {
+        broker1.requestPower(1000.0);
+        broker1000.requestPower(1.0, 1.0);
+        centralBank.allocatePower();
+        double p1 = broker1.getAllowedPower();
+        double p2 = broker1000.getAllowedPower();
+        // System.out.println("Unnalanced and discrete: p1="+p1+", fat="+p2);
+        assertTrue(p1+p2 <= centralBank.getMaxPower(), "Bank's max power exceeded");
+    }
+
+    @Test
     void testDiscrete() {
         broker1.requestPower(powerUnit * 2, powerUnit * 2);
         broker2.requestPower(powerUnit * 2);

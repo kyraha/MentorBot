@@ -76,9 +76,8 @@ public class PowerBank {
             if (totalRequested > maxPower) {
                 // Limit allocation because requested exceeds the max
                 double excess = totalRequested - maxPower;
-                double totalWeight = activeConsumers.stream().mapToDouble(c -> c.powerRequested * c.getPriority()).sum();
-                double avgPriority = totalWeight / totalRequested;
-                double tax = excess * avgPriority / activeConsumers.size();
+                double sumRevPriorities = activeConsumers.stream().mapToDouble(c -> 1.0 / c.getPriority()).sum();
+                double tax = excess / sumRevPriorities;
                 // System.out.println("Tax="+tax+", Consumers: "+activeConsumers);
 
                 for (PowerBroker c : activeConsumers) {
