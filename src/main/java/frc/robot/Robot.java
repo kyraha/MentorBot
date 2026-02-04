@@ -5,6 +5,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -12,11 +13,14 @@ import frc.robot.Drivetrain.CommandSwerveDrivetrain;
 import frc.robot.Drivetrain.PelicanDriver;
 import frc.robot.Drivetrain.TunerConstants;
 import frc.robot.Elevator.ElevatorSubsystem;
+import frc.robot.Flywheel.FlywheelSubsystem;
 import frc.robot.sensors.Camera;
+import frc.robot.sim.PhysicsSim;
 
 public class Robot extends TimedRobot {
     public CommandSwerveDrivetrain chassis;
     public ElevatorSubsystem elevator;
+    public FlywheelSubsystem flywheel;
     public OI oi;
     public Camera camera;
     final Telemetry logger = new Telemetry(OI.ROBOT_SPEED_LIMIT);
@@ -26,10 +30,12 @@ public class Robot extends TimedRobot {
 
     public Robot() {
         chassis = TunerConstants.createDrivetrain();
+        flywheel = new FlywheelSubsystem();
         elevator = new ElevatorSubsystem();
         autonomousCommand = Commands.none();
         camera = new Camera("2025-ERRshop-field.json");
         chassis.registerTelemetry(logger::telemeterize);
+        SmartDashboard.putData(flywheel);
     }
 
     /**
@@ -75,4 +81,13 @@ public class Robot extends TimedRobot {
         CommandScheduler.getInstance().run();
     }
 
+    @Override
+    public void simulationInit() {
+        flywheel.simulationInit();
+    }
+
+    @Override
+    public void simulationPeriodic() {
+        PhysicsSim.getInstance().run();
+    }
 }

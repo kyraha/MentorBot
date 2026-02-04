@@ -4,6 +4,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.button.CommandPS5Controller;
 import frc.robot.Elevator.ElevatorSubsystem;
+import frc.robot.Flywheel.RunFlywheel;
 
 public class OI {
     // Robot wide constants
@@ -44,5 +45,6 @@ public class OI {
         mainController.cross().onTrue(robot.elevator.goToSetpointCommand(ElevatorSubsystem.Constants.kElevatorL2));
         // mainController.triangle().onTrue(robot.elevator.goToSetpointCommand(ElevatorSubsystem.Constants.kElevatorL1));
         mainController.L1().onTrue(robot.elevator.goToSetpointCommand(ElevatorSubsystem.Constants.kElevatorMinHeight));
+        mainController.circle().whileTrue(new RunFlywheel(robot.flywheel));
     }
 }
