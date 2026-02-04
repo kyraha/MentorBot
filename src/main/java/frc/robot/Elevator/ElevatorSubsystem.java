@@ -10,6 +10,7 @@ import com.ctre.phoenix6.controls.MotionMagicDutyCycle;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.util.sendable.SendableBuilder;
@@ -80,7 +81,7 @@ public class ElevatorSubsystem extends SubsystemBase {
                 .withNeutralMode(NeutralModeValue.Brake);
 
         leftMotor.getConfigurator().apply(config);
-        rightMotor.setControl(new Follower(Constants.canMotorLeft, true));
+        rightMotor.setControl(new Follower(Constants.canMotorLeft, MotorAlignmentValue.Opposed));
     }
 
     /**

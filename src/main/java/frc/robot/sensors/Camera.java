@@ -9,7 +9,6 @@ import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
-import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import org.photonvision.targeting.PhotonPipelineResult;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
@@ -76,14 +75,16 @@ public class Camera {
         cam = new PhotonCamera("3130Camera");
 
         // Construct PhotonPoseEstimator
-        photonPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PoseStrategy.CLOSEST_TO_REFERENCE_POSE, robotToCamera);
-
+        photonPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, robotToCamera);
     }
 
     public void addVisionMeasurement(SwerveDrivePoseEstimator odometry) {
         for (var oneResult : getResults()) {
-            photonPoseEstimator.setReferencePose(odometry.getEstimatedPosition());
-            var estiamtedOpt = photonPoseEstimator.update(oneResult);
+            var estiamtedOpt = photonPoseEstimator.estimateCoprocMultiTagPose(oneResult);
+            if (estiamtedOpt.isEmpty()) {
+                // Fallback to single tag method
+                estiamtedOpt = photonPoseEstimator.estimateLowestAmbiguityPose(oneResult);
+            }
             if (estiamtedOpt.isPresent()) {
                 var pose3d = estiamtedOpt.get().estimatedPose;
                 var pose2d = new Pose2d(pose3d.getX(), pose3d.getY(), pose3d.getRotation().toRotation2d());
