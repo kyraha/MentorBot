@@ -1,7 +1,5 @@
 package frc.robot.Power;
 
-import java.util.List;
-
 /**
  * Power Bank is a class for managing power consumption among multiple consumers when
  * the power is scarce as it usually is in an FRC robot during a match.
@@ -58,24 +56,23 @@ public class PowerBank {
         // We make this method synchronized because the entire bank must be locked
         // while all accounts are being recalculated and modified
 
-        // Reset all accounts with non-zero requests as consuming then start reallocation
-        consumers.forEach(c -> {
-            c.isConsuming = c.powerRequested > 0.0;
-            c.powerAllowed = 0.0;
-        });
+        // Reset all accounts with non-zero requests as awaiting then start reallocation
+        consumers.forEach(c -> c.reset());
         boolean needToReallocate = true;
+        double remainingPower = maxPower;
 
-        // Iterate until all consumers either are allocated or were denied in previous iteration
+        // Iterate until all consumers either are allocated or denied power
         while (needToReallocate) {
-            List<PowerBroker> activeConsumers = consumers.stream().filter(c -> c.isConsuming).toList();
-            if (activeConsumers.size() == 0) return;
+            // Only consider those who are still active. If none then stop
+            var activeConsumers = consumers.stream().filter(c -> c.isActive()).toList();
+            if (activeConsumers.isEmpty()) return;
 
-            needToReallocate = false; // for now
-            double totalRequested = activeConsumers.stream().mapToDouble(c -> c.powerRequested).sum();
+            needToReallocate = false; // for now, if won't be set back to true then we'll stop
+            double totalRequested = activeConsumers.stream().mapToDouble(c -> c.getPowerRequested()).sum();
 
-            if (totalRequested > maxPower) {
+            if (totalRequested > remainingPower) {
                 // Limit allocation because requested exceeds the max
-                double excess = totalRequested - maxPower;
+                double excess = totalRequested - remainingPower;
                 double sumRevPriorities = activeConsumers.stream().mapToDouble(c -> 1.0 / c.getPriority()).sum();
                 double tax = excess / sumRevPriorities;
                 // System.out.println("Tax="+tax+", Consumers: "+activeConsumers);
@@ -83,21 +80,31 @@ public class PowerBank {
                 for (PowerBroker c : activeConsumers) {
                     // Find how much power allowed and compare it to the minimum
                     // If not enough then exclude the consumer and need to reallocate
-                    double allowed = c.powerRequested - tax / c.getPriority();
-                    if (allowed >= c.powerMinimum) {
-                        c.powerAllowed = allowed;
+                    double priority = c.getPriority();
+                    double minimum = c.getPowerMinimum();
+                    double allowed = c.getPowerRequested() - tax / priority;
+                    if (allowed >= minimum) {
+                        c.allowPower(allowed);
                     }
                     else {
-                        c.isConsuming = false;
+                        // This guy doesn't fit, will require reallocation
                         needToReallocate = true;
+                        // System.out.println("Min:"+minimum+", VIP:"+sumRevPriorities*priority);
+                        // Sum of reverseP times P = 1 + P*(sum of all other reverseP)
+                        if (allowed >= minimum / (sumRevPriorities * priority)) {
+                            c.reserveMinPower();
+                            remainingPower -= minimum;
+                        }
+                        else {
+                            c.disconnect();
+                        }
                     }
                 }
             }
             else {
                 // Max power is not exceeded - allocate as requested
                 activeConsumers.forEach(c -> {
-                    c.powerAllowed = c.powerRequested;
-                    c.isConsuming = true;
+                    c.allowPower(c.getPowerRequested());
                 });
             }
         }

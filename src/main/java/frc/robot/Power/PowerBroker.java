@@ -27,15 +27,21 @@ import java.util.function.Supplier;
  * }</pre>
  */
 public class PowerBroker {
-    public PowerBank powerBank;                 // Where this account is registered
-    public Supplier<Double> prioritySupplier;   // Higher number means higher priority
-    public double powerRequested;               // in watts
-    public double powerMinimum;
-    public double powerAllowed;
-    public boolean isConsuming = false;
+    private Supplier<Double> prioritySupplier;   // Higher number means higher priority
+    private double powerRequested;               // in watts
+    private double powerMinimum;
+    private double powerAllowed;
+    private Status status = Status.awaiting;
+
+    public enum Status {
+        awaiting,
+        reserved,
+        consuming,
+        disconnected
+    }
 
     public String toString() {
-        return "Req:" + powerRequested + ", Allowed:" + powerAllowed + ", Prio:" + getPriority();
+        return "(Req:" + powerRequested + " -> " + powerAllowed + ", " + status + ")";
     }
 
     /**
@@ -56,6 +62,11 @@ public class PowerBroker {
         this(centralBank, prioritySupplier);
     }
 
+    /**
+     * Construct a broker with a constant priority.
+     * 
+     * @param priority, cannot be less than 1.0
+     */
     public PowerBroker(double priority) {
         this(centralBank, () -> priority);
     }
@@ -64,15 +75,43 @@ public class PowerBroker {
      * Opens a new account at a given bank.
      * This constructor shouldn't be used outside of its class therefore it's made private.
      * 
-     * @param parent    the bank where to register this account.
+     * @param bank    the bank where to register this account.
      * @param prioritySupplier  a <code>Double</code> supplier that will return the consumer's priority
      */
-    private PowerBroker(PowerBank parent, Supplier<Double> prioritySupplier) {
-        this.powerBank = parent;
+    private PowerBroker(PowerBank bank, Supplier<Double> prioritySupplier) {
         this.prioritySupplier = prioritySupplier;
         this.powerRequested = 0;
         this.powerMinimum = 0;
-        parent.registerConsumer(this);
+        bank.registerConsumer(this);
+    }
+
+    /**
+     * Checks status and returns if this consumer is active.
+     * Active consumer is one that is awaiting an allocation or ready to 
+     * consume power.
+     * 
+     * @return true if active, otherwise false
+     */
+    public boolean isActive() {
+        return status == Status.awaiting || status == Status.consuming;
+    }
+
+    /**
+     * Sets the status of this consumer to disconnected.
+     * Should only be used by the Power Bank.
+     */
+    public void disconnect() {
+        powerAllowed = 0;
+        status = Status.disconnected;
+    }
+
+    public void reset() {
+        if (powerRequested == 0.0) {
+            disconnect();
+        }
+        else {
+            status = Status.awaiting;
+        }
     }
 
     /**
@@ -82,7 +121,9 @@ public class PowerBroker {
      * @return the priority value
      */
     public double getPriority() {
-        return prioritySupplier.get();
+        double p = prioritySupplier.get();
+        if (p < 1.0) p = 1.0;
+        return p;
     }
 
     /**
@@ -91,8 +132,42 @@ public class PowerBroker {
      * performs the power allocation which usually happens in a periodic loop.
      * @return  allowed amount of power (Watts)
      */
-    public double getAllowedPower() {
+    public double getPowerAllowed() {
         return this.powerAllowed;
+    }
+
+    /**
+     * Power Allowed setter, should only be used by the Power Bank.
+     * @param power allowed (Watts)
+     */
+    public void allowPower(double powerAllowed) {
+        this.powerAllowed = powerAllowed;
+        status = Status.consuming;
+    }
+
+    /**
+     * Reserves all minimum Power, should only be used by the Power Bank.
+     * @param power allowed (Watts)
+     */
+    public void reserveMinPower() {
+        powerAllowed = powerMinimum;
+        status = Status.reserved;
+    }
+
+    /**
+     * Requested power getter, should only be used by the Power Bank.
+     * @return requested power (Watts)
+     */
+    public double getPowerRequested() {
+        return powerRequested;
+    }
+
+    /**
+     * Minimum power getter, should only be used by the Power Bank.
+     * @return minimum considered power (Watts)
+     */
+    public double getPowerMinimum() {
+        return powerMinimum;
     }
 
     /**
@@ -108,10 +183,11 @@ public class PowerBroker {
      */
     public double requestPower(double wattsWanted, double wattsLeast) {
         // Update the power requirements for reallocation
-        this.powerRequested = wattsWanted;
-        this.powerMinimum = wattsLeast;
+        // Can't request negative power
+        this.powerRequested = wattsWanted >= 0 ? wattsWanted : 0;
+        this.powerMinimum = wattsLeast >= 0 ? wattsLeast : 0;
         // and return what was allocated in the last allocation
-        return getAllowedPower();
+        return getPowerAllowed();
     }
 
     /**
