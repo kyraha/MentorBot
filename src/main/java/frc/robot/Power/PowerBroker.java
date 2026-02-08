@@ -27,6 +27,7 @@ import java.util.function.Supplier;
  * }</pre>
  */
 public class PowerBroker {
+    private PowerBank bank;
     private Supplier<Double> prioritySupplier;   // Higher number means higher priority
     private double powerRequested;               // in watts
     private double powerMinimum;
@@ -82,6 +83,7 @@ public class PowerBroker {
         this.prioritySupplier = prioritySupplier;
         this.powerRequested = 0;
         this.powerMinimum = 0;
+        this.bank = bank;
         bank.registerConsumer(this);
     }
 
@@ -105,7 +107,7 @@ public class PowerBroker {
         status = Status.disconnected;
     }
 
-    public void reset() {
+    public void resetStatus() {
         if (powerRequested == 0.0) {
             disconnect();
         }
@@ -133,7 +135,9 @@ public class PowerBroker {
      * @return  allowed amount of power (Watts)
      */
     public double getPowerAllowed() {
-        return this.powerAllowed;
+        synchronized(bank) {
+            return this.powerAllowed;
+        }
     }
 
     /**

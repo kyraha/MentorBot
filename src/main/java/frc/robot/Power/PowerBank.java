@@ -32,7 +32,7 @@ public class PowerBank {
      * 
      * @param broker the power broker object that shall be linked to the account
      */
-    public void registerConsumer(PowerBroker broker) {
+    public synchronized void registerConsumer(PowerBroker broker) {
         consumers.add(broker);
     }
 
@@ -57,7 +57,7 @@ public class PowerBank {
         // while all accounts are being recalculated and modified
 
         // Reset all accounts with non-zero requests as awaiting then start reallocation
-        consumers.forEach(c -> c.reset());
+        consumers.forEach(c -> c.resetStatus());
         boolean needToReallocate = true;
         double remainingPower = maxPower;
 
