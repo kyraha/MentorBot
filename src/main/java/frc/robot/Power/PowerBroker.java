@@ -2,7 +2,10 @@ package frc.robot.Power;
 
 import static frc.robot.Power.PowerBank.centralBank;
 
-import java.util.function.Supplier;
+import java.util.function.DoubleSupplier;
+
+import edu.wpi.first.util.sendable.Sendable;
+import edu.wpi.first.util.sendable.SendableBuilder;
 
 /**
  * This class represents a broker that negotiates power allowance at the power bank.
@@ -26,9 +29,9 @@ import java.util.function.Supplier;
  *  }
  * }</pre>
  */
-public class PowerBroker {
+public class PowerBroker implements Sendable {
     private PowerBank bank;
-    private Supplier<Double> prioritySupplier;   // Higher number means higher priority
+    private DoubleSupplier prioritySupplier;   // Higher number means higher priority
     private double powerRequested;               // in watts
     private double powerMinimum;
     private double powerAllowed;
@@ -59,7 +62,7 @@ public class PowerBroker {
      * 
      * @param prioritySupplier  a <code>Double</code> supplier that will return the consumer's priority
      */
-    public PowerBroker(Supplier<Double> prioritySupplier) {
+    public PowerBroker(DoubleSupplier prioritySupplier) {
         this(centralBank, prioritySupplier);
     }
 
@@ -79,7 +82,7 @@ public class PowerBroker {
      * @param bank    the bank where to register this account.
      * @param prioritySupplier  a <code>Double</code> supplier that will return the consumer's priority
      */
-    private PowerBroker(PowerBank bank, Supplier<Double> prioritySupplier) {
+    private PowerBroker(PowerBank bank, DoubleSupplier prioritySupplier) {
         this.prioritySupplier = prioritySupplier;
         this.powerRequested = 0;
         this.powerMinimum = 0;
@@ -123,7 +126,7 @@ public class PowerBroker {
      * @return the priority value
      */
     public double getPriority() {
-        double p = prioritySupplier.get();
+        double p = prioritySupplier.getAsDouble();
         if (p < 1.0) p = 1.0;
         return p;
     }
@@ -188,8 +191,8 @@ public class PowerBroker {
     public double requestPower(double wattsWanted, double wattsLeast) {
         // Update the power requirements for reallocation
         // Can't request negative power
-        this.powerRequested = wattsWanted >= 0 ? wattsWanted : 0;
-        this.powerMinimum = wattsLeast >= 0 ? wattsLeast : 0;
+        this.powerRequested = wattsWanted > 0 ? wattsWanted : 0;
+        this.powerMinimum = wattsLeast > 0 ? wattsLeast : 0;
         // and return what was allocated in the last allocation
         return getPowerAllowed();
     }
@@ -210,5 +213,14 @@ public class PowerBroker {
      */
     public void releasePower() {
         requestPower(0);
+    }
+
+    @Override
+    public void initSendable(SendableBuilder builder) {
+        builder.setSmartDashboardType("PowerBroker");
+        builder.addDoubleProperty("Requested", () -> powerRequested, null);
+        builder.addDoubleProperty("Minimum", () -> powerMinimum, null);
+        builder.addDoubleProperty("Allowed", () -> powerAllowed, null);
+        builder.addDoubleProperty("Priority", prioritySupplier, null);
     }
 }

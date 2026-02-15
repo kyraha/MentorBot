@@ -1,18 +1,23 @@
 package frc.robot.Power;
 
+import edu.wpi.first.util.sendable.Sendable;
+import edu.wpi.first.util.sendable.SendableBuilder;
+import edu.wpi.first.util.sendable.SendableRegistry;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
 /**
  * Power Bank is a class for managing power consumption among multiple consumers when
  * the power is scarce as it usually is in an FRC robot during a match.
  * <P>
  * For usage see {@link PowerBroker} class.
  */
-public class PowerBank {
+public class PowerBank implements Sendable {
     // This global singleton centralBank is The One central power bank for the robot.
     // Define the maximum available power here in Watts
     public static final PowerBank centralBank = new PowerBank(12.0 * 60.0);
 
     private java.util.List<PowerBroker> consumers;
-    private final double maxPower;
+    private double maxPower;
     public double getMaxPower() {return maxPower;}
 
     /**
@@ -25,6 +30,8 @@ public class PowerBank {
     private PowerBank(double maxPower) {
         this.consumers = new java.util.ArrayList<>();
         this.maxPower = maxPower;
+        SendableRegistry.add(this, "Power Bank");
+        SmartDashboard.putData(this);
     }
 
     /**
@@ -34,6 +41,9 @@ public class PowerBank {
      */
     public synchronized void registerConsumer(PowerBroker broker) {
         consumers.add(broker);
+        SendableRegistry.add(broker, "Broker",consumers.size());
+        SendableRegistry.addChild(this, broker);
+        SmartDashboard.putData(broker);
     }
 
     /**
@@ -108,5 +118,11 @@ public class PowerBank {
                 });
             }
         }
+    }
+
+    @Override
+    public void initSendable(SendableBuilder builder) {
+        builder.setSmartDashboardType("PowerBank");
+        builder.addDoubleProperty("Max Power", () -> maxPower, (p) -> maxPower = p);
     }
 }

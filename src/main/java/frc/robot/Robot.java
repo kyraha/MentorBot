@@ -13,6 +13,7 @@ import frc.robot.Drivetrain.CommandSwerveDrivetrain;
 import frc.robot.Drivetrain.PelicanDriver;
 import frc.robot.Drivetrain.TunerConstants;
 import frc.robot.Elevator.ElevatorSubsystem;
+import frc.robot.Power.PowerBank;
 import frc.robot.sensors.Camera;
 
 public class Robot extends TimedRobot {
@@ -71,10 +72,18 @@ public class Robot extends TimedRobot {
         // Periodically updates odometry with vision from the Camera
         //camera.addVisionMeasurement(chassis);
 
+        // Before running the Scheduler allocate power for whatever requests updated by this moment
+        PowerBank.centralBank.allocatePower();
+
         // Runs the Scheduler.  This is responsible for polling buttons, adding newly-scheduled
         // commands, running already-scheduled commands, removing finished or interrupted commands,
         // and running subsystem periodic() methods.
         CommandScheduler.getInstance().run();
     }
 
+    @Override
+    public void simulationPeriodic() {}
+
+    @Override
+    public void disabledPeriodic() {}
 }

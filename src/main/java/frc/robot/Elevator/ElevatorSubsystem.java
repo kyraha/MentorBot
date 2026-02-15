@@ -4,6 +4,7 @@
 
 package frc.robot.Elevator;
 
+import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
@@ -13,12 +14,14 @@ import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.ctre.phoenix6.sim.TalonFXSimState;
 
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.DIOSim;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -38,34 +41,28 @@ public class ElevatorSubsystem extends SubsystemBase {
         public static final double kElevatorRangeMeters = 1.6;
 
         // 3-stage elevator quadruples the actual range hence the division by 4.0
-        public static final double kRotationsPerMeter = kElevatorMaxHeight / (kElevatorRangeMeters / 4.0);
-        public static final double kCarriegeMassKg = 15.45;
+        public static final double kRotationsPerMeter = kElevatorMaxHeight / kElevatorRangeMeters;
+        public static final double kCarriegeMassKg = 15.45/4;
 
         // Maximum allowed stator current
         public static final double maxStatorCurrent = 40;
 
         // Elevator speed and acceleration in rotations per second or second squared
         private static double magicVelocity = 40;
-        private static double magicAcceleration = 150;
-
-        // Elevator PID values
-        private static double slot0kG = 0.045;
-        private static double slot0kP = Utils.isSimulation() ? 0.013 : 1;
-        private static double slot0kI = 0;
-        private static double slot0kD = Utils.isSimulation() ? 0.00005 : 0.025;
+        private static double magicAcceleration = 20;
 
         public static final int canMotorLeft = 18;
         public static final int canMotorRight = 19;
         public static final int dioBottomLimitSwitch = 0;
         public static final int dioTopLimitSwitch = 2;
+
+        public static final int configRetries = 5;
     }
 
     private final TalonFX leftMotor;
     private final TalonFX rightMotor;
     private final DigitalInput bottomLimitSwitch;
     private final DigitalInput topLimitSwitch;
-    private final DIOSim simBottomSwitch;
-    private final DIOSim simTopSwitch;
 
     private final MotionMagicDutyCycle motionMagicRequest;
     private boolean isZeroed = false;
@@ -74,6 +71,9 @@ public class ElevatorSubsystem extends SubsystemBase {
     private double currentSetpoint = 0;
     private TalonFXConfiguration talonConfig;
     private double allowedVelocity;
+    private boolean isConfigApplied;
+    private Notifier confApplier;
+    private double duration = 0;
 
     public ElevatorSubsystem() {
         leftMotor = new TalonFX(Constants.canMotorLeft);
@@ -81,9 +81,6 @@ public class ElevatorSubsystem extends SubsystemBase {
         bottomLimitSwitch = new DigitalInput(Constants.dioBottomLimitSwitch);
         topLimitSwitch = new DigitalInput(Constants.dioTopLimitSwitch);
         motionMagicRequest = new MotionMagicDutyCycle(0);
-
-        simBottomSwitch = new DIOSim(bottomLimitSwitch);
-        simTopSwitch = new DIOSim(topLimitSwitch);
 
         allowedVelocity = Constants.magicVelocity;
         talonConfig = new TalonFXConfiguration();
@@ -96,22 +93,38 @@ public class ElevatorSubsystem extends SubsystemBase {
         //     .withStatorCurrentLimit(Constants.maxStatorCurrent);
         talonConfig.Slot0
             .withGravityType(GravityTypeValue.Elevator_Static)
-            .withKG(Constants.slot0kG)
-            .withKP(Constants.slot0kP)
-            .withKI(Constants.slot0kI)
-            .withKD(Constants.slot0kD);
+            .withKG(0.0451)
+            .withKV(0.0046)
+            .withKA(0.0007)
+            .withKP(0.15)
+            .withKI(0)
+            .withKD(0.001);
         talonConfig.MotorOutput.withInverted(InvertedValue.CounterClockwise_Positive)
                 .withNeutralMode(NeutralModeValue.Brake);
 
-        leftMotor.getConfigurator().apply(talonConfig);
+        isConfigApplied = false;
+        confApplier = new Notifier(() -> applyConfigAsync(leftMotor, talonConfig));
+        confApplier.startPeriodic(0.1);
+
         rightMotor.setControl(new Follower(Constants.canMotorLeft, MotorAlignmentValue.Opposed));
 
         powerPriority = 1;
         powerBroker = new PowerBroker(() -> this.powerPriority);
 
-        if (Utils.isSimulation()) {
-            startSimThread();
+        // if (Utils.isSimulation()) {
+        //     startSimThread();
+        // }
+    }
+
+    public void applyConfigAsync(TalonFX controller, TalonFXConfiguration config) {
+        if (isConfigApplied) return;
+
+        for (int i=0; i < Constants.configRetries; i++) {
+            StatusCode code = controller.getConfigurator().apply(config);
+            if (code.isOK()) break;
+            System.out.println("Elevator Apply Config failed. Try "+i);
         }
+        isConfigApplied = true;
     }
 
     /**
@@ -133,6 +146,7 @@ public class ElevatorSubsystem extends SubsystemBase {
         leftMotor.set(0);
         currentSetpoint = 0;
         powerBroker.releasePower();
+        System.out.println("Elevator STOP happened!");
     }
 
     public void goToSetpoint(double setpoint) {
@@ -155,51 +169,48 @@ public class ElevatorSubsystem extends SubsystemBase {
         return rotations / Constants.kRotationsPerMeter;
     }
 
-    private Notifier m_simNotifier;
     double m_lastSimTime;
-    private void startSimThread() {
-        m_lastSimTime = Utils.getCurrentTimeSeconds();
+    @Override
+    public void simulationPeriodic() {
+        final double currentTime = Utils.getCurrentTimeSeconds();
+        double deltaTime = currentTime - m_lastSimTime;
+        m_lastSimTime = currentTime;
 
-        /* Run simulation at a faster rate so PID gains behave more reasonably */
-        m_simNotifier = new Notifier(() -> {
-            final double currentTime = Utils.getCurrentTimeSeconds();
-            double deltaTime = currentTime - m_lastSimTime;
-            m_lastSimTime = currentTime;
-
-            /* use the measured time delta, get battery voltage from WPILib */
-            updateSimState(deltaTime, RobotController.getBatteryVoltage());
-        });
-        m_simNotifier.startPeriodic(0.005);
+        /* use the measured time delta, get battery voltage from WPILib */
+        updateSimState(deltaTime, RobotController.getBatteryVoltage());
     }
 
     private ElevatorSim simElevator = new ElevatorSim(
         DCMotor.getFalcon500(2),
-        9.1367,
+        9.1367 / 4.0,
         Constants.kCarriegeMassKg,
         0.0254,
         0,
-        (Constants.kElevatorRangeMeters + 0.06) / 4.0,  // +6 cm for dead zones beyond the limit switches
+        Constants.kElevatorRangeMeters + 0.06,  // +6 cm for dead zones beyond the limit switches
         true,
         0.05);
-    private double previousVelocity = 0;
+    private double previousSimVelocity = 0;
     private void updateSimState(double deltaTime, double batteryVolts) {
-        var simTalon = leftMotor.getSimState();
+        final TalonFXSimState simTalon = leftMotor.getSimState();
+        final DIOSim simBottomSwitch = new DIOSim(bottomLimitSwitch);
+        final DIOSim simTopSwitch = new DIOSim(topLimitSwitch);
         simTalon.setSupplyVoltage(batteryVolts);
         simElevator.setInputVoltage(simTalon.getMotorVoltage());
         simElevator.update(deltaTime);
 
         double elevatorPosition = simElevator.getPositionMeters();
         double elevatorVelocity = simElevator.getVelocityMetersPerSecond();
-        double elevatorAcceleration = (elevatorVelocity - previousVelocity) / deltaTime;
+        double elevatorAcceleration = (elevatorVelocity - previousSimVelocity) / deltaTime;
 
         simTalon.setRawRotorPosition(metersToRotations(elevatorPosition));
         simTalon.setRotorVelocity(metersToRotations(elevatorVelocity));
         simTalon.setRotorAcceleration(metersToRotations(elevatorAcceleration));
+        // if (elevatorPosition < 0.05) System.out.println("ELEVATOR pos: "+elevatorPosition);
 
-        simBottomSwitch.setValue(!simElevator.wouldHitLowerLimit(elevatorPosition - 0.03/4.0));
-        simTopSwitch.setValue(simElevator.wouldHitUpperLimit(elevatorPosition + 0.03/4.0));
+        simBottomSwitch.setValue(!simElevator.wouldHitLowerLimit(elevatorPosition - 0.03));
+        simTopSwitch.setValue(simElevator.wouldHitUpperLimit(elevatorPosition + 0.03));
 
-        previousVelocity = elevatorVelocity;
+        previousSimVelocity = elevatorVelocity;
     }
 
 
@@ -234,6 +245,14 @@ public class ElevatorSubsystem extends SubsystemBase {
         return topLimitSwitch.get();
     }
 
+    public double getMMTargetPosition() {
+        return leftMotor.getClosedLoopReference().getValueAsDouble();
+    }
+
+    public double getMMTargetVelocity() {
+        return leftMotor.getClosedLoopReferenceSlope().getValueAsDouble();
+    }
+
     /**
      * Initializes the data we send on shuffleboard
      * Calls the default init sendable for Subsystem Bases
@@ -250,22 +269,26 @@ public class ElevatorSubsystem extends SubsystemBase {
         builder.addBooleanProperty("Is Zeroed", ()->isZeroed, null);
         builder.addDoubleProperty("Allowed Velo", () -> allowedVelocity, null);
         builder.addDoubleProperty("Setpoint", () -> this.currentSetpoint, null);
+        builder.addDoubleProperty("Reference", this::getMMTargetPosition, null);
+        builder.addDoubleProperty("RefVelocity", this::getMMTargetVelocity, null);
+        builder.addDoubleProperty("Duration", () -> duration, null);
     }
 
-    private boolean aboveBottomLimitSwitch = true;
+    private boolean isAboveBottomLimit = true;
     @Override
     public void periodic() {
+        double ts = Timer.getFPGATimestamp();
         // Constantly monitor limit switches and the stator current
         if (brokeBottomLimitSwitch()) {
-            if (aboveBottomLimitSwitch) {
-                aboveBottomLimitSwitch = false;
+            if (isAboveBottomLimit) {
+                isAboveBottomLimit = false;
                 stop();
                 leftMotor.setPosition(0);
                 isZeroed = true;
             }
         }
         else {
-            aboveBottomLimitSwitch = true;
+            isAboveBottomLimit = true;
         }
 
         if (brokeTopLimitSwitch()) {
@@ -277,15 +300,17 @@ public class ElevatorSubsystem extends SubsystemBase {
         }
 
         double power = rotationsToMeters(Constants.magicVelocity) * Constants.kCarriegeMassKg * 9.8;
-        if (getPosition() < currentSetpoint - 1) {
+        // Only care about power if below target by 5% of total height
+        if (getPosition() < currentSetpoint - Constants.kElevatorMaxHeight*0.05) {
             power = powerBroker.requestPower(power);
             allowedVelocity = metersToRotations(power / Constants.kCarriegeMassKg / 9.8);
+            talonConfig.MotionMagic.withMotionMagicCruiseVelocity(allowedVelocity);
+            isConfigApplied = false;
         }
         else {
             powerBroker.releasePower();
             allowedVelocity = Constants.magicVelocity;
         }
-        talonConfig.MotionMagic.withMotionMagicCruiseVelocity(allowedVelocity);
-        leftMotor.getConfigurator().apply(talonConfig);
+        duration = (Timer.getFPGATimestamp() - ts)*1000;
     }
 }
