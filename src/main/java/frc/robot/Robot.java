@@ -5,6 +5,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -12,6 +13,7 @@ import frc.robot.Drivetrain.CommandSwerveDrivetrain;
 import frc.robot.Drivetrain.PelicanDriver;
 import frc.robot.Drivetrain.TunerConstants;
 import frc.robot.Elevator.ElevatorSubsystem;
+import frc.robot.Power.PowerBank;
 import frc.robot.sensors.Camera;
 
 public class Robot extends TimedRobot {
@@ -41,6 +43,7 @@ public class Robot extends TimedRobot {
         // Whatever was in robotInit() before
         oi = new OI(this);
         chassis.setDefaultCommand(new PelicanDriver(chassis, oi));
+        SmartDashboard.putData(elevator);
     }
 
     @Override
@@ -69,10 +72,18 @@ public class Robot extends TimedRobot {
         // Periodically updates odometry with vision from the Camera
         //camera.addVisionMeasurement(chassis);
 
+        // Before running the Scheduler allocate power for whatever requests updated by this moment
+        PowerBank.centralBank.allocatePower();
+
         // Runs the Scheduler.  This is responsible for polling buttons, adding newly-scheduled
         // commands, running already-scheduled commands, removing finished or interrupted commands,
         // and running subsystem periodic() methods.
         CommandScheduler.getInstance().run();
     }
 
+    @Override
+    public void simulationPeriodic() {}
+
+    @Override
+    public void disabledPeriodic() {}
 }
