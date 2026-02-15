@@ -14,8 +14,9 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 public class PowerBank implements Sendable {
     // This global singleton centralBank is The One central power bank for the robot.
     // Define the maximum available power here in Watts
-    public static final PowerBank centralBank = new PowerBank(12.0 * 60.0);
+    public static final PowerBank centralBank = new PowerBank(12.0 * 60.0, "CentralBank");
 
+    private final String ntKey;
     private java.util.List<PowerBroker> consumers;
     private double maxPower;
     public double getMaxPower() {return maxPower;}
@@ -27,11 +28,12 @@ public class PowerBank implements Sendable {
      * 
      * @param maxPower  Maximum total available power in the system (Watts)
      */
-    private PowerBank(double maxPower) {
+    private PowerBank(double maxPower, String key) {
         this.consumers = new java.util.ArrayList<>();
         this.maxPower = maxPower;
+        this.ntKey = key;
         SendableRegistry.add(this, "Power Bank");
-        SmartDashboard.putData(this);
+        SmartDashboard.putData(key, this);
     }
 
     /**
@@ -41,9 +43,9 @@ public class PowerBank implements Sendable {
      */
     public synchronized void registerConsumer(PowerBroker broker) {
         consumers.add(broker);
-        SendableRegistry.add(broker, "Broker",consumers.size());
         SendableRegistry.addChild(this, broker);
-        SmartDashboard.putData(broker);
+        String brokerKey = ntKey+"/"+consumers.size()+"_"+broker.getNameString();
+        SmartDashboard.putData(brokerKey, broker);
     }
 
     /**
@@ -85,7 +87,6 @@ public class PowerBank implements Sendable {
                 double excess = totalRequested - remainingPower;
                 double sumRevPriorities = activeConsumers.stream().mapToDouble(c -> 1.0 / c.getPriority()).sum();
                 double tax = excess / sumRevPriorities;
-                // System.out.println("Tax="+tax+", Consumers: "+activeConsumers);
 
                 for (PowerBroker c : activeConsumers) {
                     // Find how much power allowed and compare it to the minimum
@@ -99,7 +100,6 @@ public class PowerBank implements Sendable {
                     else {
                         // This guy doesn't fit, will require reallocation
                         needToReallocate = true;
-                        // System.out.println("Min:"+minimum+", VIP:"+sumRevPriorities*priority);
                         // Sum of reverseP times P = 1 + P*(sum of all other reverseP)
                         if (allowed >= minimum / (sumRevPriorities * priority)) {
                             c.reserveMinPower();

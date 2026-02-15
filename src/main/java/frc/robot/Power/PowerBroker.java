@@ -36,6 +36,7 @@ public class PowerBroker implements Sendable {
     private double powerMinimum;
     private double powerAllowed;
     private Status status = Status.awaiting;
+    private final String name;
 
     public enum Status {
         awaiting,
@@ -45,7 +46,7 @@ public class PowerBroker implements Sendable {
     }
 
     public String toString() {
-        return "(Req:" + powerRequested + " -> " + powerAllowed + ", " + status + ")";
+        return name + "(Req: " + powerRequested + " -> " + powerAllowed + ", " + status + ")";
     }
 
     /**
@@ -62,8 +63,8 @@ public class PowerBroker implements Sendable {
      * 
      * @param prioritySupplier  a <code>Double</code> supplier that will return the consumer's priority
      */
-    public PowerBroker(DoubleSupplier prioritySupplier) {
-        this(centralBank, prioritySupplier);
+    public PowerBroker(DoubleSupplier prioritySupplier, String name) {
+        this(centralBank, prioritySupplier, name);
     }
 
     /**
@@ -71,8 +72,8 @@ public class PowerBroker implements Sendable {
      * 
      * @param priority, cannot be less than 1.0
      */
-    public PowerBroker(double priority) {
-        this(centralBank, () -> priority);
+    public PowerBroker(double priority, String name) {
+        this(centralBank, () -> priority, name);
     }
 
     /**
@@ -82,12 +83,17 @@ public class PowerBroker implements Sendable {
      * @param bank    the bank where to register this account.
      * @param prioritySupplier  a <code>Double</code> supplier that will return the consumer's priority
      */
-    private PowerBroker(PowerBank bank, DoubleSupplier prioritySupplier) {
+    private PowerBroker(PowerBank bank, DoubleSupplier prioritySupplier, String name) {
         this.prioritySupplier = prioritySupplier;
         this.powerRequested = 0;
         this.powerMinimum = 0;
         this.bank = bank;
+        this.name = name;
         bank.registerConsumer(this);
+    }
+
+    public String getNameString() {
+        return name;
     }
 
     /**

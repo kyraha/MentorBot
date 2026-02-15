@@ -21,7 +21,7 @@ public class PelicanLimiter {
     public final VariableSlewRateLimiter thetaLimiter = new VariableSlewRateLimiter(0).enableRotationalInput();
 
     private double powerPriority = 1;
-    private PowerBroker powerBroker = new PowerBroker(() -> this.powerPriority);
+    private PowerBroker powerBroker = new PowerBroker(() -> this.powerPriority, "pelican");
 
     /**
      * Check if the vector is virtually zero. This is purely mathematical deadband to avoid division by zero.

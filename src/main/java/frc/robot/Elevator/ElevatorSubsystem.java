@@ -109,7 +109,7 @@ public class ElevatorSubsystem extends SubsystemBase {
         rightMotor.setControl(new Follower(Constants.canMotorLeft, MotorAlignmentValue.Opposed));
 
         powerPriority = 1;
-        powerBroker = new PowerBroker(() -> this.powerPriority);
+        powerBroker = new PowerBroker(() -> this.powerPriority, "elevator");
 
         // if (Utils.isSimulation()) {
         //     startSimThread();
@@ -146,7 +146,6 @@ public class ElevatorSubsystem extends SubsystemBase {
         leftMotor.set(0);
         currentSetpoint = 0;
         powerBroker.releasePower();
-        System.out.println("Elevator STOP happened!");
     }
 
     public void goToSetpoint(double setpoint) {
@@ -205,7 +204,6 @@ public class ElevatorSubsystem extends SubsystemBase {
         simTalon.setRawRotorPosition(metersToRotations(elevatorPosition));
         simTalon.setRotorVelocity(metersToRotations(elevatorVelocity));
         simTalon.setRotorAcceleration(metersToRotations(elevatorAcceleration));
-        // if (elevatorPosition < 0.05) System.out.println("ELEVATOR pos: "+elevatorPosition);
 
         simBottomSwitch.setValue(!simElevator.wouldHitLowerLimit(elevatorPosition - 0.03));
         simTopSwitch.setValue(simElevator.wouldHitUpperLimit(elevatorPosition + 0.03));

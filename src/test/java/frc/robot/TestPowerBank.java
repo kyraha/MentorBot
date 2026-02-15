@@ -14,9 +14,9 @@ import edu.wpi.first.wpilibj.Timer;
 import frc.robot.Power.PowerBroker;
 
 public class TestPowerBank {
-    private static PowerBroker broker1 = new PowerBroker(() -> 1.0);
-    private static PowerBroker broker2 = new PowerBroker(() -> 3.0);
-    private static PowerBroker broker1000 = new PowerBroker(1000);
+    private static PowerBroker broker1 = new PowerBroker(() -> 1.0, "low");
+    private static PowerBroker broker2 = new PowerBroker(() -> 3.0, "high");
+    private static PowerBroker broker1000 = new PowerBroker(1000, "VIP");
     private static double powerUnit = centralBank.getMaxPower() / 3.0;
 
     @BeforeEach
@@ -100,7 +100,7 @@ public class TestPowerBank {
     void testStress() {
         List<PowerBroker> brokers = new ArrayList<>();
         for (int i = 0; i < 500; i++) {
-            PowerBroker pb = new PowerBroker(() -> 1.0);
+            PowerBroker pb = new PowerBroker(() -> 1.0, "stress"+i);
             brokers.add(pb);
         }
         Timer stopwatch = new Timer();
