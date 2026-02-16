@@ -21,7 +21,6 @@ import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.DIOSim;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -73,7 +72,6 @@ public class ElevatorSubsystem extends SubsystemBase {
     private double allowedVelocity;
     private boolean isConfigApplied;
     private Notifier confApplier;
-    private double duration = 0;
 
     public ElevatorSubsystem() {
         leftMotor = new TalonFX(Constants.canMotorLeft);
@@ -104,16 +102,12 @@ public class ElevatorSubsystem extends SubsystemBase {
 
         isConfigApplied = false;
         confApplier = new Notifier(() -> applyConfigAsync(leftMotor, talonConfig));
-        confApplier.startPeriodic(0.1);
+        confApplier.startPeriodic(0.113);
 
         rightMotor.setControl(new Follower(Constants.canMotorLeft, MotorAlignmentValue.Opposed));
 
         powerPriority = 1;
         powerBroker = new PowerBroker(() -> this.powerPriority, "elevator");
-
-        // if (Utils.isSimulation()) {
-        //     startSimThread();
-        // }
     }
 
     public void applyConfigAsync(TalonFX controller, TalonFXConfiguration config) {
@@ -269,13 +263,11 @@ public class ElevatorSubsystem extends SubsystemBase {
         builder.addDoubleProperty("Setpoint", () -> this.currentSetpoint, null);
         builder.addDoubleProperty("Reference", this::getMMTargetPosition, null);
         builder.addDoubleProperty("RefVelocity", this::getMMTargetVelocity, null);
-        builder.addDoubleProperty("Duration", () -> duration, null);
     }
 
     private boolean isAboveBottomLimit = true;
     @Override
     public void periodic() {
-        double ts = Timer.getFPGATimestamp();
         // Constantly monitor limit switches and the stator current
         if (brokeBottomLimitSwitch()) {
             if (isAboveBottomLimit) {
@@ -309,6 +301,5 @@ public class ElevatorSubsystem extends SubsystemBase {
             powerBroker.releasePower();
             allowedVelocity = Constants.magicVelocity;
         }
-        duration = (Timer.getFPGATimestamp() - ts)*1000;
     }
 }

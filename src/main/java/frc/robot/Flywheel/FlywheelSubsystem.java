@@ -5,16 +5,20 @@ import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVelocityVoltage;
 import com.ctre.phoenix6.controls.NeutralOut;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.ControlModeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Power.PowerBroker;
 import frc.robot.sim.PhysicsSim;
 
 public class FlywheelSubsystem extends SubsystemBase {
+    static private final double kMomentOfInertia = 1.0 * 0.05;  // mass * radius
+    static private final double kMaxPower = 30 * 12;
+
     private final TalonFX leftShooter;
     private final TalonFX rightShooter;
 
@@ -22,14 +26,18 @@ public class FlywheelSubsystem extends SubsystemBase {
     private final NeutralOut stopRequest = new NeutralOut();
     private final TalonFXConfiguration motorConfig;
 
+    // Tune the k-values in this particular order
     private double kS = 0.1;
     private double kV = 0.12;
-    private double kA = 0.01;
-    private double kP = 0.01;
-    private double kI = 0;
+    private double kA = 0.2;
+    private double kP = 0.5;
     private double kD = 0;
 
     private double sensorToMechGearRatio = 1;
+    private double powerPriority;
+    private PowerBroker powerBroker;
+    private double acceleration;
+    private boolean isOn;
 
     /** Creates a new Shooter. */
     public FlywheelSubsystem() {
@@ -48,7 +56,12 @@ public class FlywheelSubsystem extends SubsystemBase {
 
         updatePID();
 
+        acceleration = 0;
         voltRequest = new MotionMagicVelocityVoltage(0);
+        isOn = false;
+
+        powerPriority = 1;
+        powerBroker = new PowerBroker(() -> this.powerPriority, "flywheel");
     }
 
     public void updatePID() {
@@ -56,19 +69,30 @@ public class FlywheelSubsystem extends SubsystemBase {
         motorConfig.Slot0.kV = kV;
         motorConfig.Slot0.kA = kA;
         motorConfig.Slot0.kP = kP;
-        motorConfig.Slot0.kI = kI;
         motorConfig.Slot0.kD = kD;
         rightShooter.getConfigurator().apply(motorConfig);
     }
 
+    private double getAllowedAcceleration(double power) {
+        // Ideally the math should be in radians per second, but 2π cancels out as the return value is also in rotations/sec²
+        double omega = rightShooter.getVelocity().getValueAsDouble();
+        if (omega < 20) omega = 20;
+        double momentum = omega * kMomentOfInertia;
+        return power / momentum / 24;
+    }
+
     public void revAtVelocity(double rotsPerSec) {
+        isOn = true;
+        double power = powerBroker.requestPower(kMaxPower);
+        acceleration = getAllowedAcceleration(power);
         rightShooter.setControl(voltRequest
             .withVelocity(rotsPerSec)
-            .withAcceleration(40)
+            .withAcceleration(acceleration)
         );
     }
 
     public void stopShooter() {
+        isOn = false;
         rightShooter.setControl(stopRequest);
     }
 
@@ -82,10 +106,6 @@ public class FlywheelSubsystem extends SubsystemBase {
 
     public double getkP() {
         return kP;
-    }
-
-    public double getkI() {
-        return kI;
     }
 
     public double getkD() {
@@ -104,48 +124,52 @@ public class FlywheelSubsystem extends SubsystemBase {
         kP = value;
     }
 
-    public void setkI(double value) {
-        kI = value;
-    }
-
     public void setkD(double value) {
         kD = value;
     }
 
     public double getVelocity() {
-        double rotsPerSec = rightShooter.getVelocity().getValueAsDouble();
-        double radsPerSec = Units.rotationsToRadians(rotsPerSec);
-        double metersPerSec = radsPerSec * Units.inchesToMeters(2);
-        return metersPerSec;
+        return rightShooter.getVelocity().getValueAsDouble();
     }
 
     public double getAcceleration() {
-        double rotsPerSecSquared = rightShooter.getAcceleration().getValueAsDouble();
-        double radsPerSecSquared = Units.rotationsToRadians(rotsPerSecSquared);
-        double metersPerSecSquared = radsPerSecSquared * Units.inchesToMeters(2);
-        return metersPerSecSquared;
+        return rightShooter.getAcceleration().getValueAsDouble();
+    }
+
+    public double getReferenceVelocity() {
+        return rightShooter.getClosedLoopReference().getValueAsDouble();
+    }
+
+    public double getReferenceAcceleration() {
+        return rightShooter.getClosedLoopReferenceSlope().getValueAsDouble();
     }
 
     public void initSendable(SendableBuilder builder) {
         builder.setSmartDashboardType("Shooter");
 
-        builder.addDoubleProperty("Velocity mps", this::getVelocity, null);
-        builder.addDoubleProperty("Acceleration mpss", this::getAcceleration, null);
+        builder.addDoubleProperty("Velocity", this::getVelocity, null);
+        builder.addDoubleProperty("Acceleration", this::getAcceleration, null);
+        builder.addDoubleProperty("Ref Velocity", this::getReferenceVelocity, null);
+        builder.addDoubleProperty("Ref Acceleration", this::getReferenceAcceleration, null);
 
         builder.addDoubleProperty("kV", this::getkV, this::setkV);
         builder.addDoubleProperty("kA", this::getkA, this::setkA);
         builder.addDoubleProperty("kP", this::getkP, this::setkP);
-        builder.addDoubleProperty("kI", this::getkI, this::setkI);
         builder.addDoubleProperty("kD", this::getkD, this::setkD);
     }
 
     @Override
     public void periodic() {
-        // This method will be called once per scheduler run
+        if (isOn) {
+            double power = powerBroker.requestPower(kMaxPower);
+            double accel = getAllowedAcceleration(power);
+            rightShooter.setControl(voltRequest.withAcceleration(accel));
+        }
     }
 
     public void simulationInit() {
-        PhysicsSim.getInstance().addTalonFX(rightShooter, 0.0015);
+        PhysicsSim.getInstance().addTalonFX(rightShooter, kMomentOfInertia/2);
+        PhysicsSim.getInstance().addTalonFX(leftShooter, kMomentOfInertia/2);
     }
 
 }

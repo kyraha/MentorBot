@@ -12,7 +12,8 @@ public class RunFlywheel extends Command{
 
     @Override
     public void initialize() {
-        flyWheel.revAtVelocity(100);
+        flyWheel.updatePID();
+        flyWheel.revAtVelocity(50);
     }
 
     @Override
