@@ -13,6 +13,7 @@ import frc.robot.Drivetrain.CommandSwerveDrivetrain;
 import frc.robot.Drivetrain.PelicanDriver;
 import frc.robot.Drivetrain.TunerConstants;
 import frc.robot.Elevator.ElevatorSubsystem;
+import frc.robot.Elevator.IntakeArmSubsystem;
 import frc.robot.Flywheel.FlywheelSubsystem;
 import frc.robot.Power.PowerBank;
 import frc.robot.sensors.Camera;
@@ -22,6 +23,7 @@ public class Robot extends TimedRobot {
     public CommandSwerveDrivetrain chassis;
     public ElevatorSubsystem elevator;
     public FlywheelSubsystem flywheel;
+    public IntakeArmSubsystem intakeArm;
     public OI oi;
     public Camera camera;
     final Telemetry logger = new Telemetry(OI.ROBOT_SPEED_LIMIT);
@@ -33,10 +35,12 @@ public class Robot extends TimedRobot {
         chassis = TunerConstants.createDrivetrain();
         flywheel = new FlywheelSubsystem();
         elevator = new ElevatorSubsystem();
+        intakeArm = new IntakeArmSubsystem();
         autonomousCommand = Commands.none();
         camera = new Camera("2025-ERRshop-field.json");
         chassis.registerTelemetry(logger::telemeterize);
         SmartDashboard.putData(flywheel);
+        SmartDashboard.putData(intakeArm);
     }
 
     /**
