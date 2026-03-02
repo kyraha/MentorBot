@@ -5,31 +5,30 @@ import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Drivetrain.CommandSwerveDrivetrain;
+import frc.robot.sensors.LimelightHelpers.LimelightResults;
+import frc.robot.sensors.LimelightHelpers.LimelightTarget_Fiducial;
 
 import org.apache.commons.math3.stat.regression.OLSMultipleLinearRegression;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.photonvision.targeting.PhotonPipelineResult;
-import org.photonvision.targeting.PhotonTrackedTarget;
 
 import com.ctre.phoenix6.swerve.SwerveDrivetrain.SwerveDriveState;
 
 import java.util.ArrayList;
-import java.util.List;
 
 
 public  class HandEyeCalibration extends Command
 {
     private final int onlyTargetID = 20; // The ID of the fiducial to use for calibration
 
-    private final Camera camera;
+    private final String cameraName;
     private final CommandSwerveDrivetrain drivetrain;
     private double stillTime;
     private double timeOfPrevMeasurement = 0;
@@ -42,9 +41,9 @@ public  class HandEyeCalibration extends Command
     private ArrayList<Mat> gTbRotations;
     private Mat hTeRotation;
 
-    public HandEyeCalibration(Camera camera, CommandSwerveDrivetrain drivetrain)
+    public HandEyeCalibration(String camera, CommandSwerveDrivetrain drivetrain)
     {
-        this.camera = camera;
+        this.cameraName = camera;
         this.drivetrain = drivetrain;
         // each subsystem used by the command must be passed into the
         // addRequirements() method (which takes a vararg of Subsystem)
@@ -68,10 +67,10 @@ public  class HandEyeCalibration extends Command
     @Override
     public void execute()
     {
-        List<PhotonPipelineResult> results = camera.getResults();
+        LimelightHelpers.LimelightResults results = LimelightHelpers.getLatestResults(cameraName);
         SwerveDriveState driveState = drivetrain.getState();
 
-        if(results.isEmpty()) return;
+        if(!results.valid) return;
 
         if(isMoving(driveState)) {
             // Robot is moving, so keep resetting the still time
@@ -80,7 +79,7 @@ public  class HandEyeCalibration extends Command
         }
 
         // If all is good, take a measurement
-        takeMeasurement(results.get(results.size() - 1), driveState);
+        takeMeasurement(results, driveState);
     }
     
     @Override
@@ -113,14 +112,14 @@ public  class HandEyeCalibration extends Command
         );
     }
 
-    public void takeMeasurement(PhotonPipelineResult visionResult, SwerveDriveState driveState) {
+    public void takeMeasurement(LimelightResults visionResult, SwerveDriveState driveState) {
         double nowTime = MathSharedStore.getTimestamp();
         Pose2d nowPose = driveState.Pose;
 
         // is timing good?
         if(
             // Vision result is too stale, was before the robot became still
-            visionResult.getTimestampSeconds() < stillTime + 1.0 ||
+            visionResult.timestamp_RIOFPGA_capture < stillTime + 1.0 ||
             // Or not enough time has passed since the last measurement
             nowTime - timeOfPrevMeasurement < 2.0 || (
             // Or the robot hasn't moved since the last measurement
@@ -135,9 +134,9 @@ public  class HandEyeCalibration extends Command
         Mat odoR = new Mat(3, 3, CvType.CV_64F);
 
         boolean notPresent = true;
-        for (PhotonTrackedTarget target : visionResult.getTargets()) {
-            if (target.getFiducialId() == onlyTargetID) {
-                Transform3d camToTarget = target.getBestCameraToTarget();
+        for (LimelightTarget_Fiducial target : visionResult.targets_Fiducials) {
+            if (target.fiducialID == onlyTargetID) {
+                Pose3d camToTarget = target.getTargetPose_CameraSpace();
                 camT.put(0, 0, camToTarget.getTranslation().toVector().getData());
                 camR.put(0, 0, camToTarget.getRotation().toMatrix().getData());
                 notPresent = false;

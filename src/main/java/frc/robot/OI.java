@@ -41,11 +41,9 @@ public class OI {
 
     public void configureBindings(Robot robot) {
         mainController.R1().onTrue(robot.elevator.goToSetpointCommand(ElevatorSubsystem.Constants.kElevatorL4));
-        mainController.square().onTrue(robot.elevator.goToSetpointCommand(ElevatorSubsystem.Constants.kElevatorL3));
-        mainController.cross().onTrue(robot.elevator.goToSetpointCommand(ElevatorSubsystem.Constants.kElevatorL2));
-        // mainController.triangle().onTrue(robot.elevator.goToSetpointCommand(ElevatorSubsystem.Constants.kElevatorL1));
         mainController.L1().onTrue(robot.elevator.goToSetpointCommand(ElevatorSubsystem.Constants.kElevatorMinHeight));
 
-        mainController.circle().toggleOnTrue(new HandEyeCalibration(robot.camera, robot.chassis));
+        mainController.square().toggleOnTrue(new HandEyeCalibration("limelight_left", robot.chassis));
+        mainController.circle().toggleOnTrue(new HandEyeCalibration("limelight_right", robot.chassis));
     }
 }

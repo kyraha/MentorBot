@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.wpilibj.Filesystem;
 
 public class TestAprilTags {
@@ -38,4 +39,16 @@ public class TestAprilTags {
         }
     }
 
+    @Test
+    void testEuler() {
+        Rotation3d simple = new Rotation3d(Math.PI, -Math.PI/12, -Math.PI/6);
+        System.out.println("Simple X:"+simple.getX()+", Y:"+simple.getY()+", Z:"+simple.getZ());
+        System.out.println("Simple Q: "+simple.getQuaternion());
+
+        Rotation3d rot = new Rotation3d(Math.PI, 0, 0)
+            .rotateBy(new Rotation3d(0,0, -Math.PI/6))
+            .rotateBy(new Rotation3d(0, -Math.PI/12, 0));
+        System.out.println("Rot X:"+rot.getX()+", Y:"+rot.getY()+", Z:"+rot.getZ());
+        System.out.println("Qtr: "+rot.getQuaternion());
+    }
 }

@@ -11,7 +11,6 @@ import org.opencv.core.Point;
 import org.opencv.calib3d.Calib3d;
 
 import edu.wpi.first.cscore.OpenCvLoader;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;

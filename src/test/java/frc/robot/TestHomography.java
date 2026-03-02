@@ -11,14 +11,45 @@ import org.opencv.core.Range;
 import org.opencv.core.Scalar;
 
 import edu.wpi.first.cscore.OpenCvLoader;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
-import frc.robot.sensors.Camera;
+import edu.wpi.first.math.geometry.Translation3d;
 
 public class TestHomography {
-    // Load OpenCV library before running tests
+    private static final double[] cameraIntrinsics = { // Theoretical, needs calibration
+        652.857105, 0.0, 406.000481, // fx, 0, cx
+        0.0, 654.862118, 317.871379, // 0, fy, cy
+        0.0, 0.0, 1.0
+    };
+    public static final Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F, Scalar.all(0));
+//     distortion
+// 0.155644
+// -0.182449
+// 0.001267
+// 0.001276
+// -0.367385
+// -0.009738
+// 0.008300
+// 0.015187
+    private static final double[] homographyValues = {
+        -0.0001270542819333261,  0.0008182770377802222,  0.1862827299336119,
+         0.0006939972013693427,  0.0001741107045706584, -0.5076447771203513,
+         0.0006253018433804395, -0.0029524108712688280,  1.0};
+    public static final Mat homographyMatrix = new Mat(3, 3, CvType.CV_64F, Scalar.all(0));
+
     static {
+        // Load OpenCV library before running tests
         OpenCvLoader.forceStaticLoad();
+        // Initialize the homography matrix with predefined values
+        homographyMatrix.put(0, 0, homographyValues);
+        // Initialize the camera matrix with theoretical values
+        cameraMatrix.put(0, 0, cameraIntrinsics);
     }
+
+    //Cam mounted facing forward, half a meter forward of center, half a meter up from center.
+    private static Transform3d robotToCamera = new Transform3d(
+        new Translation3d(0.287, 0.275, 0.395),
+        new Rotation3d(3.0042,0.2186,-0.2814+0.0268-0.0642));
 
     private MatOfPoint2f image = new MatOfPoint2f(new Point(571, 261.1), new Point(261.8, 240.1),
             new Point(764, 461), new Point(194, 342.5), new Point(138.9, 233.3), new Point(329.9, 336.7));
@@ -37,7 +68,7 @@ public class TestHomography {
         world2Robot.put(2, 3, -0.206);   // height of the algae center
 
         // Initialize our homogenius robot to the camera transformation from Camera.robotToCamera
-        robot2Camera.put(0,0, Camera.robotToCamera.toMatrix().getData());
+        robot2Camera.put(0,0, robotToCamera.toMatrix().getData());
 
         // To rotate from WPI to OpenCV coordinate system, roll Y down and then yaw X to the right
         Transform3d tWpi2Opencv = new Transform3d(
@@ -101,13 +132,13 @@ public class TestHomography {
     void testGeneralHomography() {
         MatOfPoint2f imagePoints = new MatOfPoint2f(new Point(400,240));
         MatOfPoint2f worldPoints = new MatOfPoint2f();
-        Core.perspectiveTransform(imagePoints, worldPoints, Camera.homographyMatrix);
+        Core.perspectiveTransform(imagePoints, worldPoints, homographyMatrix);
         System.out.println("Transformed Point: " + worldPoints.toList().get(0).toString());
     }
 
     @Test
     void testArtificialHomography() {
-        Mat cameraInv = Camera.cameraMatrix.inv();
+        Mat cameraInv = cameraMatrix.inv();
         System.out.println("Camera Matrix Inverse:\n" + matToString(cameraInv));
         // MatOfPoint2f imagePoints = new MatOfPoint2f(new Point(571, 261.1)); //406,218));
         // MatOfPoint2f worldPoints = new MatOfPoint2f();
@@ -220,7 +251,7 @@ public class TestHomography {
             Core.divide(cP3d, new Scalar(cPointH.get(3, 0)[0]), cP3d);
 
             // Project the 3D point to 2D image coordinates using the camera intrinsics
-            Mat iP2d = Camera.cameraMatrix.matMul(cP3d);
+            Mat iP2d = cameraMatrix.matMul(cP3d);
 
             // Normalize the projected point from homogeneous coordinates
             Core.divide(iP2d, new Scalar(iP2d.get(2, 0)[0]), iP2d);

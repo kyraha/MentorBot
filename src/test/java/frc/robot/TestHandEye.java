@@ -14,7 +14,6 @@ import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.numbers.N3;
 
-import frc.robot.sensors.HandEyeCalibration;
 
 public class TestHandEye {
     // Load OpenCV library before running tests
