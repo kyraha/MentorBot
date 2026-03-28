@@ -4,6 +4,7 @@
 
 package frc.robot.Shooter;
 
+import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 
 import static java.util.Map.entry;
@@ -112,7 +113,12 @@ public class HoodSubsystem extends SubsystemBase {
         currentSetpoint = setpoint;
     }
 
-    double m_lastSimTime;
+    private double m_lastSimTime;
+    private AngularVelocity previousSimVelocity = AngularVelocity.ofBaseUnits(0, RadiansPerSecond);
+    private DCMotorSim simulator = new DCMotorSim(
+        LinearSystemId.createDCMotorSystem(DCMotor.getKrakenX60(1), 0.01, Constants.sensorToMechGearRatio),
+        DCMotor.getKrakenX60(1));
+
     @Override
     public void simulationPeriodic() {
         final double currentTime = Utils.getCurrentTimeSeconds();
@@ -123,10 +129,6 @@ public class HoodSubsystem extends SubsystemBase {
         updateSimState(deltaTime, RobotController.getBatteryVoltage());
     }
 
-    private DCMotorSim simulator = new DCMotorSim(
-        LinearSystemId.createDCMotorSystem(DCMotor.getKrakenX60(1), 0.01, Constants.sensorToMechGearRatio),
-        DCMotor.getKrakenX60(1));
-    private AngularVelocity previousSimVelocity;
     private void updateSimState(double deltaTime, double batteryVolts) {
         final TalonFXSimState simTalon = motor.getSimState();
         final DIOSim simBottomSwitch = new DIOSim(bottomLimitSwitch);

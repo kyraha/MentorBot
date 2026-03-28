@@ -14,13 +14,11 @@ import frc.robot.Drivetrain.PelicanDriver;
 import frc.robot.Drivetrain.TunerConstants;
 import frc.robot.Power.PowerBank;
 import frc.robot.Shooter.HoodSubsystem;
-import frc.robot.sensors.Camera;
 
 public class Robot extends TimedRobot {
     public CommandSwerveDrivetrain chassis;
     public HoodSubsystem elevator;
     public OI oi;
-    public Camera camera;
     final Telemetry logger = new Telemetry(OI.ROBOT_SPEED_LIMIT);
 
     // private final StickDriver driver;
@@ -30,7 +28,6 @@ public class Robot extends TimedRobot {
         chassis = TunerConstants.createDrivetrain();
         elevator = new HoodSubsystem();
         autonomousCommand = Commands.none();
-        camera = new Camera("2025-ERRshop-field.json");
         chassis.registerTelemetry(logger::telemeterize);
     }
 

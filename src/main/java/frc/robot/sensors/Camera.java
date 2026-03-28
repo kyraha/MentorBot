@@ -1,21 +1,12 @@
 package frc.robot.sensors;
 
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
-import org.photonvision.PhotonCamera;
-import org.photonvision.PhotonPoseEstimator;
 
-import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.wpilibj.Filesystem;
 
 public class Camera {
     private static final double[] cameraIntrinsics = { // Theoretical, needs calibration
@@ -44,51 +35,11 @@ public class Camera {
         new Translation3d(0.287, 0.275, 0.395),
         new Rotation3d(3.0042,0.2186,-0.2814+0.0268-0.0642));
 
-    PhotonPoseEstimator photonPoseEstimator;
-    private AprilTagFieldLayout aprilTagFieldLayout;
-    private PhotonCamera cam;
-
     static {
         // Initialize the homography matrix with predefined values
         homographyMatrix.put(0, 0, homographyValues);
         // Initialize the camera matrix with theoretical values
         cameraMatrix.put(0, 0, cameraIntrinsics);
-    }
-
-    public Camera(String customFieldName) {
-        try {
-            Path pathToLayout = FileSystems.getDefault().getPath(
-                Filesystem.getDeployDirectory().toString(),
-                "fields",
-                customFieldName);
-
-            // The field from AprilTagField JSON file
-            aprilTagFieldLayout = new AprilTagFieldLayout(pathToLayout);
-        }
-        catch (Exception e) {
-            throw new RuntimeException(String.format("Error reading filed file: %s", customFieldName), e);
-        }
-
-        //Forward Camera
-        cam = new PhotonCamera("3130Camera");
-
-        // Construct PhotonPoseEstimator
-        photonPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, robotToCamera);
-    }
-
-    public void addVisionMeasurement(SwerveDrivePoseEstimator odometry) {
-        for (var oneResult : cam.getAllUnreadResults()) {
-            var estiamtedOpt = photonPoseEstimator.estimateCoprocMultiTagPose(oneResult);
-            if (estiamtedOpt.isEmpty()) {
-                // Fallback to single tag method
-                estiamtedOpt = photonPoseEstimator.estimateLowestAmbiguityPose(oneResult);
-            }
-            if (estiamtedOpt.isPresent()) {
-                var pose3d = estiamtedOpt.get().estimatedPose;
-                var pose2d = new Pose2d(pose3d.getX(), pose3d.getY(), pose3d.getRotation().toRotation2d());
-                odometry.addVisionMeasurement(pose2d, estiamtedOpt.get().timestampSeconds);
-            }
-        }
     }
 
 }
