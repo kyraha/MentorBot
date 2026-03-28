@@ -12,13 +12,13 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.Drivetrain.CommandSwerveDrivetrain;
 import frc.robot.Drivetrain.PelicanDriver;
 import frc.robot.Drivetrain.TunerConstants;
-import frc.robot.Elevator.ElevatorSubsystem;
 import frc.robot.Power.PowerBank;
+import frc.robot.Shooter.HoodSubsystem;
 import frc.robot.sensors.Camera;
 
 public class Robot extends TimedRobot {
     public CommandSwerveDrivetrain chassis;
-    public ElevatorSubsystem elevator;
+    public HoodSubsystem elevator;
     public OI oi;
     public Camera camera;
     final Telemetry logger = new Telemetry(OI.ROBOT_SPEED_LIMIT);
@@ -28,7 +28,7 @@ public class Robot extends TimedRobot {
 
     public Robot() {
         chassis = TunerConstants.createDrivetrain();
-        elevator = new ElevatorSubsystem();
+        elevator = new HoodSubsystem();
         autonomousCommand = Commands.none();
         camera = new Camera("2025-ERRshop-field.json");
         chassis.registerTelemetry(logger::telemeterize);

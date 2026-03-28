@@ -3,7 +3,6 @@ package frc.robot;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.button.CommandPS5Controller;
-import frc.robot.Elevator.ElevatorSubsystem;
 
 public class OI {
     // Robot wide constants
@@ -39,10 +38,7 @@ public class OI {
     }
 
     public void configureBindings(Robot robot) {
-        mainController.R1().onTrue(robot.elevator.goToSetpointCommand(ElevatorSubsystem.Constants.kElevatorL4));
-        mainController.square().onTrue(robot.elevator.goToSetpointCommand(ElevatorSubsystem.Constants.kElevatorL3));
-        mainController.cross().onTrue(robot.elevator.goToSetpointCommand(ElevatorSubsystem.Constants.kElevatorL2));
         // mainController.triangle().onTrue(robot.elevator.goToSetpointCommand(ElevatorSubsystem.Constants.kElevatorL1));
-        mainController.L1().onTrue(robot.elevator.goToSetpointCommand(ElevatorSubsystem.Constants.kElevatorMinHeight));
+        // mainController.L1().onTrue(robot.elevator.goToSetpointCommand(HoodSubsystem.Constants.kElevatorMinHeight));
     }
 }
